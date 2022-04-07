@@ -4,6 +4,8 @@ from random import choice
 
 text_analizer = GetPlaces()
 
+# 2022-04-07 22:03:17,254 - telegram.ext.dispatcher - DEBUG - Processing Update: {'message': {'chat': {'username': '***', 'first_name': '***', 'type': 'private', 'id': ***}, 'message_id': 440, 'new_chat_members': [], 'new_chat_photo': [], 'entities': [], 'caption_entities': [], 'group_chat_created': False, 'supergroup_chat_created': False, 'location': {'latitude': ***, 'longitude': ***}, 'date': 1649354597, 'channel_chat_created': False, 'photo': [], 'delete_chat_photo': False, 'from': {'username': '***', 'is_bot': False, 'id': ***, 'language_code': 'ru', 'first_name': '***'}}, 'update_id': 81211740}
+
 
 class Vertex:
     def __init__(self, name, type, address, location):  # название, адресс, координаты
