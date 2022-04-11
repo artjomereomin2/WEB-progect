@@ -1,12 +1,6 @@
 import pymorphy2
 
 
-# /FindOne ... - Ищет ближайший объект, указанный после команды, оценивает время до него
-# /FindAny ...(количество) ...(объект) - Ищет ближайшие объекты, количество и тип которых указано после команды, оценивает время до них
-# /SetLocation ...(геолокация) - Задаёт начальное местоположение
-# /From ...(место откуда) to ...(место куда) - Оценивает время пути между 2 точками
-# /Text ...(предложение) - Расапознаёт запрос пользователя и сообщает куда и как долго ему нужно идти
-
 class GetPlaces:
     def __init__(self):
         self.morph = pymorphy2.MorphAnalyzer()
@@ -36,6 +30,9 @@ class GetPlaces:
                 else:
                     k = 1
             return ans
+        if command_type == '/FindList':
+            places = text.split(';')
+            return places
         if command_type == '/Text':
             nouns = []
             for i in range(len(words)):

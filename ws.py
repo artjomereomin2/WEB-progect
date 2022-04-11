@@ -54,9 +54,31 @@ class Vertex:
             ans.append(f"{minutes} минут")
         return ' '.join(ans)
 
+def normal_time(sec):
+    res = timedelta(seconds=sec)
+    days = res.days
+    seconds = res.seconds
+    hours = (seconds % (3600 * 24)) // 3600
+    minutes = seconds % 60
+    ans = ['Идти']
+    if days:
+        ans.append(f"{days} дней")
+    if hours:
+        ans.append(f"{hours} часов")
+    if minutes:
+        ans.append(f"{minutes} минут")
+    return ans
 
 class WayFinder:
     def do_work(self, text, command_type):
+        line = '\n'
+        if command_type=='/FindAny':
+            points = ... # TODO вписать поиск ближайших
+            return f'Найдены следующие результаты:\n{line.join([f"{Vertex(line,line,line, self.start).time(point)}" for point in points])}'
+        if command_type=='/From':
+            points = ...  # TODO вписать поиск ближайших
+            #TODO доделать
+
         self.points = {}
         places = text_analizer.where_to_go(text, command_type)
         for place in places:
@@ -73,21 +95,9 @@ class WayFinder:
         result = self.find('START', -1, [], places)  # TODO вместо 0,0 нужно вписать координаты пользователя
         points = []
         for place in result[0]:
-            points.append(f"*{place.name}({place.address})")
-        res = timedelta(seconds=result[1])
-        days = res.days
-        seconds = res.seconds
-        hours = (seconds % (3600 * 24)) // 3600
-        minutes = seconds % 60
-        ans = ['Идти']
-        if days:
-            ans.append(f"{days} дней")
-        if hours:
-            ans.append(f"{hours} часов")
-        if minutes:
-            ans.append(f"{minutes} минут")
-        line = '\n'
-        return f"Следуйте по маршруту:\n{line.join(points)}\nВремя пути {ans}"
+            points.append(f"*-{place.name}({place.address})")
+        ans = normal_time(result[1])
+        return f"Следуйте по маршруту:\n{line.join(points)}\n{' '.join(ans)}"
 
     def find(self, now_type, ind, way, to_go, time=0):
         # print(now_type, ind, way, to_go, time)
@@ -119,4 +129,4 @@ example = WayFinder()
 # v1, v2 = Vertex("Москва", "город", "Москва", (55.755799, 37.617617)), Vertex("Питер", "город", "Питер", (59.938955, 30.315644))
 # print(v1.time(v2))
 
-print(example.do_work("Где здесь хорошая аптека к Солнечному", '/Text'))
+print(example.do_work("остановка автобуса 67 рынок Северный", '/Text'))
