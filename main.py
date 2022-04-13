@@ -25,7 +25,7 @@ def SetLocation(update, context):
 
 def Location(update, context):
     wf.start = (update.message.location.longitude, update.message.location.latitude)
-    update.message.reply_text('Спасибо!')
+    update.message.reply_text('Спасибо! Можете спрашивать у меня куда вам надо')
     return -1
 
 
