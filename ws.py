@@ -7,9 +7,6 @@ from datetime import timedelta
 text_analizer = GetPlaces()
 
 
-# 2022-04-07 22:03:17,254 - telegram.ext.dispatcher - DEBUG - Processing Update: {'message': {'chat': {'username': '***', 'first_name': '***', 'type': 'private', 'id': ***}, 'message_id': 440, 'new_chat_members': [], 'new_chat_photo': [], 'entities': [], 'caption_entities': [], 'group_chat_created': False, 'supergroup_chat_created': False, 'location': {'latitude': ***, 'longitude': ***}, 'date': 1649354597, 'channel_chat_created': False, 'photo': [], 'delete_chat_photo': False, 'from': {'username': '***', 'is_bot': False, 'id': ***, 'language_code': 'ru', 'first_name': '***'}}, 'update_id': 81211740}
-
-
 class Vertex:
     def __init__(self, name, type, address, location):  # название, адресс, координаты
         self.name = name
@@ -54,6 +51,7 @@ class Vertex:
             ans.append(f"{minutes} минут")
         return ' '.join(ans)
 
+
 def normal_time(sec):
     res = timedelta(seconds=sec)
     days = res.days
@@ -69,15 +67,19 @@ def normal_time(sec):
         ans.append(f"{minutes} минут")
     return ans
 
+
 class WayFinder:
-    def do_work(self, text, command_type):
+    def __init__(self):
+        self.start = ()
+
+    def do_work(self, text, num, command_type):
         line = '\n'
-        if command_type=='/FindAny':
-            points = ... # TODO вписать поиск ближайших
-            return f'Найдены следующие результаты:\n{line.join([f"{Vertex(line,line,line, self.start).time(point)}" for point in points])}'
-        if command_type=='/From':
+        if command_type == '/FindAny':
             points = ...  # TODO вписать поиск ближайших
-            #TODO доделать
+            return f'Найдены следующие результаты:\n{line.join([f"{Vertex(line, line, line, self.start).time(point)}" for point in points])}'
+        if command_type == '/From':
+            points = ...  # TODO вписать поиск ближайших
+            # TODO доделать
 
         self.points = {}
         places = text_analizer.where_to_go(text, command_type)
@@ -91,13 +93,17 @@ class WayFinder:
             for x in mid_ress:
                 self.points[place].append(Vertex(*x))
         # print(self.points)
-        self.start = (0, 0)  # текущие координаты пользователя
-        result = self.find('START', -1, [], places)  # TODO вместо 0,0 нужно вписать координаты пользователя
-        points = []
-        for place in result[0]:
-            points.append(f"*-{place.name}({place.address})")
-        ans = normal_time(result[1])
-        return f"Следуйте по маршруту:\n{line.join(points)}\n{' '.join(ans)}"
+        try:
+            result = self.find('START', -1, [], places)  # TODO вместо -1,-1 нужно вписать координаты пользователя
+            points = []
+            for place in result[0]:
+                points.append(f"*-{place.name}({place.address})")
+            ans = normal_time(result[1])
+            return f"Следуйте по маршруту:\n{line.join(points)}\n{' '.join(ans)}"
+        except IndexError:
+            return 'Сначала отправьте геолокацию'
+        except AttributeError:
+            return 'Сначала отправьте геолокацию'
 
     def find(self, now_type, ind, way, to_go, time=0):
         # print(now_type, ind, way, to_go, time)
