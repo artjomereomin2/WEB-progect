@@ -12,6 +12,7 @@ class GetPlaces:
             if c.isalpha() or c in [' ', '\n']:
                 new_text += c
             else:
+                new_text += ' '
                 others += c
         return (new_text.split(), others)
 
@@ -20,7 +21,7 @@ class GetPlaces:
         if command_type == '/FindOne':
             return words
         if command_type == '/FindAny':
-            return (words[0], ' '.join(words[1:]))
+            return (int(words[0]), ' '.join(words[1:]))
         if command_type == '/From':
             ans = [[], []]
             k = 0
@@ -31,7 +32,10 @@ class GetPlaces:
                     k = 1
             return ans
         if command_type == '/FindList':
-            places = text.split(';')
+            places = text.split(',')
+            return places
+        if command_type == '/FindOrder':
+            places = text.split(',')
             return places
         if command_type == '/Text':
             nouns = []

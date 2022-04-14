@@ -14,6 +14,9 @@ class Vertex:
         self.address = address
         self.location = location
 
+    def __repr__(self):
+        return f'{self.type} "{self.name}", {self.address}'
+
     def get_distance(self, other):
         # p1 и p2 - это кортежи из двух элементов - координаты точек
         radius = 6373.0
@@ -73,16 +76,45 @@ class WayFinder:
         self.start = ()
 
     def do_work(self, text, num, command_type):
-        line = '\n'
-        if command_type == '/FindAny':
-            points = ...  # TODO вписать поиск ближайших
-            return f'Найдены следующие результаты:\n{line.join([f"{Vertex(line, line, line, self.start).time(point)}" for point in points])}'
-        if command_type == '/From':
-            points = ...  # TODO вписать поиск ближайших
-            # TODO доделать
-
-        self.points = {}
         places = text_analizer.where_to_go(text, command_type)
+        print(text, command_type)
+        line = '\n'
+        try:
+            if command_type == '/FindAny':
+                points = GeoFind(text[1], self.start, text[0])
+                ansewrs = []
+                for point in points:
+                    ansewrs.append(f"*-{point[0]}. {Vertex(line, line, line, self.start).timeRepr(point)}")
+                return f'Найдены следующие результаты:\n{line.join(ansewrs)}'
+            if command_type == '/From':
+                now = GeoFind(text[0], self.start)[0]
+                points = {text[1]: GeoFind(text[1], self.start, 5)}
+                way, time = self.find([text[1]], points, now)
+                return f"Ближе всего {way[0].repr()}. {normal_time(time)}."
+            if command_type == '/FindList':
+                now = self.start
+                points = {place_name: GeoFind(place_name, self.start, 5) for place_name in text}
+                way, time = self.find(text, points, now)
+                res = [f"*-{way[i]}" for i in range(len(way))]
+                return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}"
+            if command_type == '/FindOrder':
+                now = self.start
+                points = {place_name: GeoFind(place_name, self.start, 5) for place_name in text}
+                way, time = self.find(text, points, now,order=True)
+                res = [f"*-{way[i]}" for i in range(len(way))]
+                return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}"
+            if command_type=='/Text':
+                now = self.start
+                points = {place_name: GeoFind(place_name, self.start, 5) for place_name in text}
+                way, time = self.find(text, points, now)
+                res = [f"*-{way[i]}" for i in range(len(way))]
+                return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}"
+        except IndexError:
+            return 'Сначала отправьте геолокацию'
+        except AttributeError:
+            return 'Сначала отправьте геолокацию'
+        """points = {}
+
         for place in places:
             # TODO тут нужно вписать фунцкию, которая по названию(н-р 'аптека')
             #  и кол-ву необходимых результатов ищет ближайшие(геокодером)
@@ -93,19 +125,22 @@ class WayFinder:
             for x in mid_ress:
                 self.points[place].append(Vertex(*x))
         # print(self.points)
-        try:
-            result = self.find('START', -1, [], places)  # TODO вместо -1,-1 нужно вписать координаты пользователя
+        
+            result = self.find(places, points, 'START', -1, [],
+                               places)  # TODO вместо -1,-1 нужно вписать координаты пользователя
             points = []
             for place in result[0]:
                 points.append(f"*-{place.name}({place.address})")
             ans = normal_time(result[1])
-            return f"Следуйте по маршруту:\n{line.join(points)}\n{' '.join(ans)}"
-        except IndexError:
-            return 'Сначала отправьте геолокацию'
-        except AttributeError:
-            return 'Сначала отправьте геолокацию'
+            return f"Следуйте по маршруту:\n{line.join(points)}\n{' '.join(ans)}"""
 
-    def find(self, now_type, ind, way, to_go, time=0):
+
+    def find(self, to_go, points, start, order=False):  # TODO add order
+        self.points = points
+        self.begin = start
+        return self.go("START", -1, [], to_go)
+
+    def go(self, now_type, ind, way, to_go, time=0):
         # print(now_type, ind, way, to_go, time)
         if not to_go:
             return way, time
@@ -120,19 +155,16 @@ class WayFinder:
             if now_type != "START":
                 try_time = time + self.points[now_type][ind].time(self.points[try_type][try_ind])
             else:
-                try_time = time + Vertex("START", "START", "NOWHERE", self.start).time(self.points[try_type][try_ind])
-            resway, restime = self.find(try_type, try_ind, try_way, try_to_go, try_time)
+                try_time = time + Vertex("START", "START", "NOWHERE", self.begin).time(self.points[try_type][try_ind])
+            resway, restime = self.go(try_type, try_ind, try_way, try_to_go, try_time)
             if restime < best_time:
                 best_way = resway.copy()
                 best_time = restime
         return best_way, best_time
-
-
-example = WayFinder()
 
 # example.do_work()
 
 # v1, v2 = Vertex("Москва", "город", "Москва", (55.755799, 37.617617)), Vertex("Питер", "город", "Питер", (59.938955, 30.315644))
 # print(v1.time(v2))
 
-print(example.do_work("остановка автобуса 67 рынок Северный", '/Text'))
+# print(example.do_work("остановка автобуса 67 рынок Северный", '/Text'))
