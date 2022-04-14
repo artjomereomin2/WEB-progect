@@ -100,10 +100,10 @@ class WayFinder:
             if command_type == '/FindOrder':
                 now = self.start
                 points = {place_name: GeoFind(place_name, self.start, 5) for place_name in text}
-                way, time = self.find(text, points, now,order=True)
+                way, time = self.find(text, points, now, order=True)
                 res = [f"*-{way[i]}" for i in range(len(way))]
                 return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}"
-            if command_type=='/Text':
+            if command_type == '/Text':
                 now = self.start
                 points = {place_name: GeoFind(place_name, self.start, 5) for place_name in text}
                 way, time = self.find(text, points, now)
@@ -134,13 +134,12 @@ class WayFinder:
             ans = normal_time(result[1])
             return f"Следуйте по маршруту:\n{line.join(points)}\n{' '.join(ans)}"""
 
-
     def find(self, to_go, points, start, order=False):  # TODO add order
         self.points = points
         self.begin = start
-        return self.go("START", -1, [], to_go)
+        return self.go("START", -1, [], to_go, order=order)
 
-    def go(self, now_type, ind, way, to_go, time=0):
+    def go(self, now_type, ind, way, to_go, time=0, order=False):
         # print(now_type, ind, way, to_go, time)
         if not to_go:
             return way, time
@@ -148,7 +147,10 @@ class WayFinder:
         best_time = 10 ** 9
         for _ in range(5):
             try_type = choice(to_go)
-            try_ind = r(len(self.points[try_type]))
+            if not order:
+                try_ind = r(len(self.points[try_type]))
+            else:
+                try_ind = 0
             try_way = way + [self.points[try_type][try_ind]]
             try_to_go = to_go.copy()
             try_to_go.pop(try_to_go.index(try_type))
@@ -156,7 +158,7 @@ class WayFinder:
                 try_time = time + self.points[now_type][ind].time(self.points[try_type][try_ind])
             else:
                 try_time = time + Vertex("START", "START", "NOWHERE", self.begin).time(self.points[try_type][try_ind])
-            resway, restime = self.go(try_type, try_ind, try_way, try_to_go, try_time)
+            resway, restime = self.go(try_type, try_ind, try_way, try_to_go, try_time, order=order)
             if restime < best_time:
                 best_way = resway.copy()
                 best_time = restime
