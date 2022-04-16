@@ -4,7 +4,12 @@ from random import choice
 import math
 from datetime import timedelta
 
+KEY = '9e17d9d0-1bf0-4b91-a0a8-1d208b733889'
+
 text_analizer = GetPlaces()
+
+
+def GeoFind
 
 
 class Vertex:
@@ -19,20 +24,21 @@ class Vertex:
 
     def get_distance(self, other):
         # p1 и p2 - это кортежи из двух элементов - координаты точек
-        radius = 6373.0
+        degree_to_meters_factor = 111 * 1000  # 111 километров в метрах
+        a_lon, a_lat = self.location
+        b_lon, b_lat = other.location
 
-        lon1 = math.radians(self.location[0])
-        lat1 = math.radians(self.location[1])
-        lon2 = math.radians(other.location[0])
-        lat2 = math.radians(other.location[1])
+        # Берем среднюю по широте точку и считаем коэффициент для нее.
+        radians_lattitude = math.radians((a_lat + b_lat) / 2.)
+        lat_lon_factor = math.cos(radians_lattitude)
 
-        d_lon = lon2 - lon1
-        d_lat = lat2 - lat1
+        # Вычисляем смещения в метрах по вертикали и горизонтали.
+        dx = abs(a_lon - b_lon) * degree_to_meters_factor * lat_lon_factor
+        dy = abs(a_lat - b_lat) * degree_to_meters_factor
 
-        a = math.sin(d_lat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(d_lon / 2) ** 2
-        c = 2 * math.atan2(a ** 0.5, (1 - a) ** 0.5)
+        # Вычисляем расстояние между точками.
+        distance = math.sqrt(dx * dx + dy * dy)
 
-        distance = radius * c
         return distance
 
     def time(self, other):
