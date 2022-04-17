@@ -30,23 +30,23 @@ def Location(update, context):
 
 
 def FindOne(update, context):
-    update.message.reply_text(wf.do_work(update.message.text.split()[1], 1, '/FindOne'))
+    update.message.reply_text(wf.do_work(update.message.text.split(), '/FindOne'))
 
 
 def FindAny(update, context):
-    update.message.reply_text(wf.do_work(update.message.text.split()[2], update.message.text.split()[1], '/FindAny'))
+    update.message.reply_text(wf.do_work(update.message.text.split(), '/FindAny'))
 
 
 def FindList(update, context):
-    update.message.reply_text(wf.do_work(update.message.text.split()[2], '*', '/FindList'))
+    update.message.reply_text(wf.do_work(update.message.text.split()[2], '/FindList'))
 
 
 def From(update, context):
-    update.message.reply_text(wf.do_work(update.message.text.split()[1], update.message.text.split()[2], '/From'))
+    update.message.reply_text(wf.do_work(update.message.text.split(), '/From'))
 
 
 def Text(update, context):
-    update.message.reply_text(wf.do_work(' '.join(update.message.text.split()[1:]), '*', '/Text'))
+    update.message.reply_text(wf.do_work(' '.join(update.message.text.split()[1:]), '/Text'))
 
 
 def main():

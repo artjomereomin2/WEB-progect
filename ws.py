@@ -2,6 +2,8 @@ from gp import GetPlaces
 from random import randrange as r
 from random import choice
 import math
+import requests
+from pprint import pprint
 from datetime import timedelta
 
 KEY = '9e17d9d0-1bf0-4b91-a0a8-1d208b733889'
@@ -9,7 +11,22 @@ KEY = '9e17d9d0-1bf0-4b91-a0a8-1d208b733889'
 text_analizer = GetPlaces()
 
 
-def GeoFind
+def GeoFind(name, near, ammount):
+    search_api_server = "https://search-maps.yandex.ru/v1/"
+
+    search_params = {
+        "apikey": KEY,
+        "text": name,
+        "lang": "ru_RU",
+        "ll": near,
+        "spn": "0.1,0.1",
+        "results": ammount
+    }
+
+    response = requests.get(search_api_server, params=search_params).json()
+    if not response:
+        pass
+    pprint(response)
 
 
 class Vertex:
@@ -81,7 +98,7 @@ class WayFinder:
     def __init__(self):
         self.start = ()
 
-    def do_work(self, text, num, command_type):
+    def do_work(self, text, command_type):
         places = text_analizer.where_to_go(text, command_type)
         print(text, command_type)
         line = '\n'
@@ -93,7 +110,7 @@ class WayFinder:
                     ansewrs.append(f"*-{point[0]}. {Vertex(line, line, line, self.start).timeRepr(point)}")
                 return f'Найдены следующие результаты:\n{line.join(ansewrs)}'
             if command_type == '/From':
-                now = GeoFind(text[0], self.start)[0]
+                now = GeoFind(text[0], self.start, 1)
                 points = {text[1]: GeoFind(text[1], self.start, 5)}
                 way, time = self.find([text[1]], points, now)
                 return f"Ближе всего {way[0].repr()}. {normal_time(time)}."
