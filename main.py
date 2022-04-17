@@ -3,6 +3,7 @@ import json
 import logging
 from telegram.ext import Updater, MessageHandler, Filters, CommandHandler, ConversationHandler
 from ws import WayFinder
+from keys import TOKEN
 
 # Запускаем логгирование
 logging.basicConfig(
@@ -10,8 +11,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-
-TOKEN = '5263728547:AAHgyA2cnCALO-XV8YMFipAFG_hzQOVGaZ4'
 
 wf = WayFinder()
 

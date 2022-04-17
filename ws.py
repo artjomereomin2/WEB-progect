@@ -5,8 +5,7 @@ import math
 import requests
 from pprint import pprint
 from datetime import timedelta
-
-KEY = '9e17d9d0-1bf0-4b91-a0a8-1d208b733889'
+from keys import KEY
 
 text_analizer = GetPlaces()
 
