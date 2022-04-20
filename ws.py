@@ -12,6 +12,8 @@ text_analizer = GetPlaces()
 
 def GeoFind(name, near, ammount):
     search_api_server = "https://search-maps.yandex.ru/v1/"
+    near_1, near_2 = near
+    near = str(near_1) + ',' + str(near_2)
 
     search_params = {
         "apikey": KEY,
@@ -25,7 +27,14 @@ def GeoFind(name, near, ammount):
     response = requests.get(search_api_server, params=search_params).json()
     if not response:
         pass
-    pprint(response)
+    points = []
+    for i in response['features']:
+        coords = i['geometry']['coordinates']
+        points.append(
+            Vertex(i['properties']['CompanyMetaData']['name'],
+                   i['properties']['CompanyMetaData']['Categories'][0]['name'],
+                   i['properties']['CompanyMetaData']['address'], coords))
+    return points
 
 
 class Vertex:
@@ -40,7 +49,7 @@ class Vertex:
 
     def get_distance(self, other):
         # p1 и p2 - это кортежи из двух элементов - координаты точек
-        degree_to_meters_factor = 111 * 1000  # 111 километров в метрах
+        degree_to_meters_factor = 1110  # 111 километров в метрах
         a_lon, a_lat = self.location
         b_lon, b_lat = other.location
 
@@ -61,12 +70,15 @@ class Vertex:
         return timedelta(hours=self.get_distance(other) / 4).seconds
 
     def timeRepr(self, other):
+        print(self.get_distance(other))
         res = timedelta(hours=self.get_distance(other) / 4)
         s = str(res).split()
-        # print(s)
-        days = int(s[0])
-        hours = int(s[2].split(':')[0])
-        minutes = int(s[2].split(':')[1])
+        try:
+            days = s[-3]
+        except Exception:
+            days = False
+        hours = int(s[-1].split(':')[0])
+        minutes = int(s[-1].split(':')[1])
         ans = ['Идти']
         if days:
             ans.append(f"{days} дней")
@@ -94,47 +106,39 @@ def normal_time(sec):
 
 
 class WayFinder:
-    def __init__(self):
-        self.start = ()
-
-    def do_work(self, text, command_type):
-        places = text_analizer.where_to_go(text, command_type)
-        print(text, command_type)
+    def do_work(self, text, command_type, coords=None):
+        # places = text_analizer.where_to_go(text, command_type)
+        # print(text, command_type)
         line = '\n'
-        try:
-            if command_type == '/FindAny':
-                points = GeoFind(text[1], self.start, text[0])
-                ansewrs = []
-                for point in points:
-                    ansewrs.append(f"*-{point[0]}. {Vertex(line, line, line, self.start).timeRepr(point)}")
-                return f'Найдены следующие результаты:\n{line.join(ansewrs)}'
-            if command_type == '/From':
-                now = GeoFind(text[0], self.start, 1)
-                points = {text[1]: GeoFind(text[1], self.start, 5)}
-                way, time = self.find([text[1]], points, now)
-                return f"Ближе всего {way[0].repr()}. {normal_time(time)}."
-            if command_type == '/FindList':
-                now = self.start
-                points = {place_name: GeoFind(place_name, self.start, 5) for place_name in text}
-                way, time = self.find(text, points, now)
-                res = [f"*-{way[i]}" for i in range(len(way))]
-                return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}"
-            if command_type == '/FindOrder':
-                now = self.start
-                points = {place_name: GeoFind(place_name, self.start, 5) for place_name in text}
-                way, time = self.find(text, points, now, order=True)
-                res = [f"*-{way[i]}" for i in range(len(way))]
-                return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}"
-            if command_type == '/Text':
-                now = self.start
-                points = {place_name: GeoFind(place_name, self.start, 5) for place_name in text}
-                way, time = self.find(text, points, now)
-                res = [f"*-{way[i]}" for i in range(len(way))]
-                return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}"
-        except IndexError:
-            return 'Сначала отправьте геолокацию'
-        except AttributeError:
-            return 'Сначала отправьте геолокацию'
+        if command_type == '/FindAny':
+            points = GeoFind(text[1], coords, text[0])
+            ansewrs = []
+            for point in points:
+                ansewrs.append(f"*-{point}. {Vertex('line', 'line', 'line', coords).timeRepr(point)}")
+            return f'Найдены следующие результаты:\n{line.join(ansewrs)}'
+        if command_type == '/From':
+            now = GeoFind(text[0], coords, 1)
+            points = {text[1]: GeoFind(text[1], coords, 5)}
+            way, time = self.find([text[1]], points, now)
+            return f"Ближе всего {way[0].repr()}. {normal_time(time)}."
+        if command_type == '/FindList':
+            now = coords
+            points = {place_name: GeoFind(place_name, self.start, 5) for place_name in text}
+            way, time = self.find(text, points, now)
+            res = [f"*-{way[i]}" for i in range(len(way))]
+            return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}"
+        if command_type == '/FindOrder':
+            now = coords
+            points = {place_name: GeoFind(place_name, self.start, 5) for place_name in text}
+            way, time = self.find(text, points, now, order=True)
+            res = [f"*-{way[i]}" for i in range(len(way))]
+            return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}"
+        if command_type == '/Text':
+            now = coords
+            points = {place_name: GeoFind(place_name, self.start, 5) for place_name in text}
+            way, time = self.find(text, points, now)
+            res = [f"*-{way[i]}" for i in range(len(way))]
+            return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}"
         """points = {}
 
         for place in places:
@@ -160,6 +164,9 @@ class WayFinder:
         self.points = points
         self.begin = start
         return self.go("START", -1, [], to_go, order=order)
+
+    def add_people(self, id, last_name, first_name, lang, is_bot, coords):
+        pass
 
     def go(self, now_type, ind, way, to_go, time=0, order=False):
         # print(now_type, ind, way, to_go, time)

@@ -4,6 +4,7 @@ import logging
 from telegram.ext import Updater, MessageHandler, Filters, CommandHandler, ConversationHandler
 from ws import WayFinder
 from keys import TOKEN
+from pprint import pprint
 
 # Запускаем логгирование
 logging.basicConfig(
@@ -23,25 +24,37 @@ def SetLocation(update, context):
 
 
 def Location(update, context):
-    wf.start = (update.message.location.longitude, update.message.location.latitude)
+    context.user_data['coords'] = update.message.location['longitude'], update.message.location['latitude']
     update.message.reply_text('Спасибо! Можете спрашивать у меня куда вам надо')
     return -1
 
 
 def FindOne(update, context):
-    update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindOne'))
+    try:
+        update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindOne', context.user_data['coords']))
+    except KeyError:
+        update.message.reply_text('Сначала отправьте координаты')
 
 
 def FindAny(update, context):
-    update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindAny'))
+    try:
+        update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindAny', context.user_data['coords']))
+    except KeyError:
+        update.message.reply_text('Сначала отправьте координаты')
 
 
 def FindList(update, context):
-    update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindList'))
+    try:
+        update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindList', context.user_data['coords']))
+    except KeyError:
+        update.message.reply_text('Сначала отправьте координаты')
 
 
 def From(update, context):
-    update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/From'))
+    try:
+        update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/From', context.user_data['coords']))
+    except KeyError:
+        update.message.reply_text('Сначала отправьте координаты')
 
 
 def Text(update, context):
