@@ -27,6 +27,7 @@ def GeoFind(name, near, ammount):
     response = requests.get(search_api_server, params=search_params).json()
     if not response:
         pass
+    pprint(response)
     points = []
     for i in response['features']:
         coords = i['geometry']['coordinates']
@@ -176,7 +177,7 @@ class WayFinder:
         pass
 
     def go(self, now_type, ind, way, to_go, time=0, order=False):
-        goodness = 10
+        goodness = 100
         # print(now_type, ind, way, to_go, time)
         if not to_go:
             return way, time
@@ -194,7 +195,7 @@ class WayFinder:
             if now_type != "START":
                 try_time = time + self.points[now_type][ind].time(self.points[try_type][try_ind])
             else:
-                 try_time = time + Vertex("START", "START", "NOWHERE", self.begin.location).time(self.points[try_type][try_ind])
+                 try_time = time + Vertex("START", "START", "NOWHERE", self.begin).time(self.points[try_type][try_ind])
             resway, restime = self.go(try_type, try_ind, try_way, try_to_go, try_time, order=order)
             if restime < best_time:
                 best_way = resway.copy()
