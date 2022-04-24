@@ -111,14 +111,28 @@ class WayFinder:
     def set_location(self, id, last_name, first_name, lang, is_bot, coords):
         con = sqlite3.connect("peoples.sqlite")
         cur = con.cursor()
-        cur.execute(
-            f'''INSERT INTO information VALUES({id},"{last_name}","{first_name}","{lang}",{int(is_bot)},{coords[0]},{coords[1]})''')
+        try:
+            cur.execute(
+                f'''INSERT INTO information VALUES({id},"{last_name}","{first_name}","{lang}",{int(is_bot)},{coords[0]},{coords[1]})''')
+        except sqlite3.IntegrityError:
+            cur.execute(
+                f'''UPDATE information SET longitude = {coords[0]} WHERE id = {id}''')
+            cur.execute(
+                f'''UPDATE information SET latitude = {coords[1]} WHERE id = {id}''')
         con.commit()
         con.close()
 
-    def do_work(self, text, command_type, coords=None):
+    def do_work(self, text, command_type, id, coords=None):
         # places = text_analizer.where_to_go(text, command_type)
         # print(text, command_type)
+
+        con = sqlite3.connect("peoples.sqlite")
+        cur = con.cursor()
+        cur.execute(
+            f'''INSERT INTO requests(id_pers,request) VALUES({id},"{command_type + ' ' + ' '.join(text)}")''')
+        con.commit()
+        con.close()
+
         goodness = 10
         line = '\n'
         if command_type == '/FindOne':

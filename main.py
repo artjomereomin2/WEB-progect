@@ -34,35 +34,40 @@ def Location(update, context):
 
 def FindOne(update, context):
     try:
-        update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindOne', context.user_data['coords']))
+        update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindOne', update.message.from_user.id,
+                                             context.user_data['coords']))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
 def FindAny(update, context):
     try:
-        update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindAny', context.user_data['coords']))
+        update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindAny', update.message.from_user.id,
+                                             context.user_data['coords']))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
 def FindList(update, context):
     try:
-        update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindList', context.user_data['coords']))
+        update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindList', update.message.from_user.id,
+                                             context.user_data['coords']))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
 def From(update, context):
-    # try:
-    update.message.reply_text(wf.do_work((update.message.text.split()[1], update.message.text.split()[3]), '/From',
-                                         context.user_data['coords']))
-    # except KeyError:
-    #     update.message.reply_text('Сначала отправьте координаты')
+    try:
+        update.message.reply_text(wf.do_work((update.message.text.split()[1], update.message.text.split()[3]), '/From',
+                                             update.message.from_user.id,
+                                             context.user_data['coords']))
+    except KeyError:
+        update.message.reply_text('Сначала отправьте координаты')
 
 
 def Text(update, context):
-    update.message.reply_text(wf.do_work(' '.join(update.message.text.split()[1:]), '/Text'))
+    update.message.reply_text(
+        wf.do_work(' '.join(update.message.text.split()[1:]), '/Text', update.message.from_user.id))
 
 
 def main():
