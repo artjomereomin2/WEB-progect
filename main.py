@@ -18,6 +18,18 @@ wf = WayFinder()
 
 # Определяем функцию-обработчик сообщений.
 # У неё два параметра, сам бот и класс updater, принявший сообщение.
+def Help(update, context):
+    update.message.reply_text(
+        'Я волшебный колобок и я проведу вас по этому страшному лабиринту.'
+        '\nВот, что я могу:\n/SetLocation ...(геолокация) - Задаёт начальное местоположение'
+        '\n/FindOne ... - Ищет ближайший объект, указанный после команды, оценивает время до него'
+        '\n/FindAny ...(количество) ...(объект) - Ищет ближайшие объекты, количество и тип которых указано после команды, оценивает время до них'
+        '\n/FindList ...(объекты) - Ищет ближайшие объекты, которые указаны после команды'
+        '\n/From ...(место откуда) to ...(место куда) - Оценивает время пути между 2 точками'
+        '\n/Text ...(предложение) - Расапознаёт запрос пользователя и сообщает куда и как долго ему нужно идти'
+        '\n/FindOrder <место1>, <место2>... - ищет места для посещения в порядке, например если человек хочет сходить в кино, а затем поужинать, он напишет /FindOrder кино, кафе')
+
+
 def SetLocation(update, context):
     update.message.reply_text('Отправьте свою геопозицию')
     return 1
@@ -46,16 +58,20 @@ def FindAny(update, context):  # +
 def FindList(update, context):  # +
     try:
         update.message.reply_text(
-            wf.do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindList', context.user_data['coords']))
+            wf.do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindList', context.user_data['coords'],
+                       update))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
+
 
 def FindOrder(update, context):  # +
     try:
         update.message.reply_text(
-            wf.do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindOrder', context.user_data['coords']))
+            wf.do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindOrder', context.user_data['coords'],
+                       update))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
+
 
 def From(update, context):  # TODO адреса не работают
     try:
@@ -76,9 +92,9 @@ def From(update, context):  # TODO адреса не работают
         update.message.reply_text('Сначала отправьте координаты')
 
 
-def Text(update, context): #++-
+def Text(update, context):  # ++-
     update.message.reply_text(
-        wf.do_work(' '.join(update.message.text.split()[1:]), '/Text', context.user_data['coords']))
+        wf.do_work(' '.join(update.message.text.split()[1:]), '/Text', context.user_data['coords'], update))
 
 
 def main():
@@ -100,6 +116,7 @@ def main():
     dp.add_handler(CommandHandler('FindOrder', FindOrder))
     dp.add_handler(CommandHandler('From', From))
     dp.add_handler(CommandHandler('Text', Text))
+    dp.add_handler(CommandHandler('Help', Help))
 
     updater.start_polling()
 

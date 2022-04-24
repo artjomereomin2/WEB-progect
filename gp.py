@@ -1,6 +1,5 @@
 import pymorphy2
 
-#TODO починить северный северный рынок
 
 class GetPlaces:
     def __init__(self):
@@ -10,30 +9,44 @@ class GetPlaces:
         new_text = ''
         others = ''
         for c in text:
-            if c.isalpha() or c.isdigit() or c in [' ', '\n']:
+            if c.isalpha() or c.isdigit():
                 new_text += c
             else:
-                new_text += ' '
-                others += c
-        return (new_text.split(), others)
+                new_text += f' {c} '
+        return new_text.split()
 
     def where_to_go(self, text):
-        words, others = self.get_letters_and_etc(text)
-        print(words)
-        nouns = []
-        for i in range(len(words)):
+        words = self.get_letters_and_etc(text)
+        to_find = []
+        i = 0
+        while i < len(words):
             word = words[i]
-            # print(self.morph.parse(word)[0].tag)
-            if "NOUN" in self.morph.parse(word)[0].tag or (
-                    "ADJF" in self.morph.parse(word)[0].tag and word[0].isupper()):
-                if i != 0 and "ADJF" in self.morph.parse(words[i - 1])[0].tag:
-                    nouns.append(
-                        f"{self.morph.parse(words[i - 1])[0].normal_form} {self.morph.parse(word)[0].normal_form}")
-                else:
-                    nouns.append(self.morph.parse(word)[0].normal_form)
-        return nouns
+            if "NOUN" in self.morph.parse(word)[0].tag:
+                name = [word]
+                while i >= 0:
+                    words.pop(i)
+                    i -= 1
+                    if i >= 0 and 'ADJF' in self.morph.parse(words[i])[0].tag:
+                        name = [words[i]] + name
+                    else:
+                        break
+                to_find.append(' '.join(name))
+            i += 1
+        i = 0
+        while i < len(words):
+            word = words[i]
+            if word[0].isupper():
+                name = [word]
+                while i >= 0:
+                    words.pop(i)
+                    i -= 1
+                    if i >= 0 and 'ADJF' in self.morph.parse(words[i])[0].tag:
+                        name = [words[i]] + name
+                    else:
+                        break
+                to_find.append(' '.join(name))
+            i += 1
+        return to_find
 
 
 example = GetPlaces()
-
-# print(example.where_to_go('Где здесь хорошая аптека к Солнечному'))
