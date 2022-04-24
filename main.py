@@ -29,37 +29,56 @@ def Location(update, context):
     return -1
 
 
-def FindOne(update, context):
+def FindOne(update, context):  # +
     try:
         update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindOne', context.user_data['coords']))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
-def FindAny(update, context):
+def FindAny(update, context):  # +
     try:
         update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindAny', context.user_data['coords']))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
-def FindList(update, context):
+def FindList(update, context):  # +
     try:
-        update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindList', context.user_data['coords']))
+        update.message.reply_text(
+            wf.do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindList', context.user_data['coords']))
+    except KeyError:
+        update.message.reply_text('Сначала отправьте координаты')
+
+def FindOrder(update, context):  # +
+    try:
+        update.message.reply_text(
+            wf.do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindOrder', context.user_data['coords']))
+    except KeyError:
+        update.message.reply_text('Сначала отправьте координаты')
+
+def From(update, context):  # TODO адреса не работают
+    try:
+        text = update.message.text
+        begin = []
+        end = []
+        has_to = False
+        for word in text.split()[1:]:
+            if word == 'to':
+                has_to = True
+            elif has_to:
+                end.append(word)
+            else:
+                begin.append(word)
+        update.message.reply_text(wf.do_work((' '.join(begin), ' '.join(end)), '/From',
+                                             context.user_data['coords']))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
-def From(update, context):
-    # try:
-    update.message.reply_text(wf.do_work((update.message.text.split()[1], update.message.text.split()[3]), '/From',
-                                         context.user_data['coords']))
-    # except KeyError:
-    #     update.message.reply_text('Сначала отправьте координаты')
-
-
-def Text(update, context):
-    update.message.reply_text(wf.do_work(' '.join(update.message.text.split()[1:]), '/Text'))
+def Text(update, context): #++-
+    update.message.reply_text(
+        wf.do_work(' '.join(update.message.text.split()[1:]), '/Text', context.user_data['coords']))
 
 
 def main():
@@ -78,6 +97,7 @@ def main():
     dp.add_handler(CommandHandler('FindOne', FindOne))
     dp.add_handler(CommandHandler('FindAny', FindAny))
     dp.add_handler(CommandHandler('FindList', FindList))
+    dp.add_handler(CommandHandler('FindOrder', FindOrder))
     dp.add_handler(CommandHandler('From', From))
     dp.add_handler(CommandHandler('Text', Text))
 

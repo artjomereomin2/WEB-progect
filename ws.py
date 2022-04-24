@@ -10,6 +10,10 @@ from keys import KEY
 text_analizer = GetPlaces()
 
 
+
+# TODO контроль времени
+
+
 def GeoFind(name, near, ammount):
     search_api_server = "https://search-maps.yandex.ru/v1/"
     near_1, near_2 = near
@@ -27,7 +31,7 @@ def GeoFind(name, near, ammount):
     response = requests.get(search_api_server, params=search_params).json()
     if not response:
         pass
-    pprint(response)
+    # pprint(response)
     points = []
     for i in response['features']:
         coords = i['geometry']['coordinates']
@@ -113,13 +117,13 @@ class WayFinder:
         goodness = 10
         line = '\n'
         if command_type == '/FindOne':
-            points = GeoFind(text[0], coords, 1)
+            points = GeoFind(' '.join(text), coords, 1)
             ansewrs = []
             for point in points:
                 ansewrs.append(f"*-{point}. {Vertex('line', 'line', 'line', coords).timeRepr(point)}")
             return f'Объект найден:\n{line.join(ansewrs)}'
         if command_type == '/FindAny':
-            points = GeoFind(text[1], coords, text[0])
+            points = GeoFind(' '.join(text[1:]), coords, text[0])
             ansewrs = []
             for point in points:
                 ansewrs.append(f"*-{point}. {Vertex('line', 'line', 'line', coords).timeRepr(point)}")
@@ -131,22 +135,35 @@ class WayFinder:
             return f"Маршрут построен:\nИз {way[0].__repr__()} . {normal_time(time)}."
         if command_type == '/FindList':
             now = coords
+            print(coords)
+            print(123, text)
             points = {place_name: GeoFind(place_name, coords, goodness) for place_name in text}
             way, time = self.find(text, points, now)
             res = [f"*-{way[i]}" for i in range(len(way))]
-            return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}"
+            return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {' '.join(normal_time(time))} без учёта времени пребывания на местах."
         # if command_type == '/FindOrder':
         #     now = coords
         #     points = {place_name: GeoFind(place_name, coords, 5) for place_name in text}
         #     way, time = self.find(text, points, now, order=True)
         #     res = [f"*-{way[i]}" for i in range(len(way))]
         #     return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}"
-        if command_type == '/Text':
+        if command_type == '/FindOrder':
             now = coords
+            print(coords)
+            print(123, text)
             points = {place_name: GeoFind(place_name, coords, goodness) for place_name in text}
-            way, time = self.find(text, points, now)
+            way, time = self.find(text, points, now, order=True)
             res = [f"*-{way[i]}" for i in range(len(way))]
-            return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}"
+            return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {' '.join(normal_time(time))} без учёта времени пребывания на местах."
+        if command_type == '/Text':
+            to_find = text_analizer.where_to_go(text)
+            print(123, to_find)
+            now = coords
+            print(coords)
+            points = {place_name: GeoFind(place_name, coords, goodness) for place_name in to_find}
+            way, time = self.find(to_find, points, now)
+            res = [f"*-{way[i]}" for i in range(len(way))]
+            return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {' '.join(normal_time(time))} без учёта времени пребывания на местах."
         """points = {}
 
         for place in places:
@@ -168,7 +185,8 @@ class WayFinder:
             ans = normal_time(result[1])
             return f"Следуйте по маршруту:\n{line.join(points)}\n{' '.join(ans)}"""
 
-    def find(self, to_go, points, start, order=False):  # TODO add order
+    def find(self, to_go, points, start, order=False):
+        print(order)
         self.points = points
         self.begin = start
         return self.go("START", -1, [], to_go, order=order)
@@ -177,25 +195,30 @@ class WayFinder:
         pass
 
     def go(self, now_type, ind, way, to_go, time=0, order=False):
-        goodness = 100
+        count = len(to_go)
+        goodness = {0: 0, 1: 100, 2: 80}.get(count, 20)
+
         # print(now_type, ind, way, to_go, time)
         if not to_go:
             return way, time
         best_way = []
         best_time = 10 ** 9
         for _ in range(goodness):
-            try_type = choice(to_go)
+            print(order)
             if not order:
-                try_ind = r(len(self.points[try_type]))
+                try_type = choice(to_go)
             else:
-                try_ind = 0
+                try_type = to_go[0]
+            print(to_go)
+            print(try_type,way)
+            try_ind = r(len(self.points[try_type]))
             try_way = way + [self.points[try_type][try_ind]]
             try_to_go = to_go.copy()
             try_to_go.pop(try_to_go.index(try_type))
             if now_type != "START":
                 try_time = time + self.points[now_type][ind].time(self.points[try_type][try_ind])
             else:
-                 try_time = time + Vertex("START", "START", "NOWHERE", self.begin).time(self.points[try_type][try_ind])
+                try_time = time + Vertex("START", "START", "NOWHERE", self.begin).time(self.points[try_type][try_ind])
             resway, restime = self.go(try_type, try_ind, try_way, try_to_go, try_time, order=order)
             if restime < best_time:
                 best_way = resway.copy()
