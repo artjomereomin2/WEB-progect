@@ -6,6 +6,7 @@ import requests
 from pprint import pprint
 from datetime import timedelta
 from keys import KEY
+import sqlite3
 
 text_analizer = GetPlaces()
 
@@ -107,6 +108,14 @@ def normal_time(sec):
 
 
 class WayFinder:
+    def set_location(self, id, last_name, first_name, lang, is_bot, coords):
+        con = sqlite3.connect("peoples.sqlite")
+        cur = con.cursor()
+        cur.execute(
+            f'''INSERT INTO information VALUES({id},"{last_name}","{first_name}","{lang}",{int(is_bot)},{coords[0]},{coords[1]})''')
+        con.commit()
+        con.close()
+
     def do_work(self, text, command_type, coords=None):
         # places = text_analizer.where_to_go(text, command_type)
         # print(text, command_type)
@@ -195,7 +204,7 @@ class WayFinder:
             if now_type != "START":
                 try_time = time + self.points[now_type][ind].time(self.points[try_type][try_ind])
             else:
-                 try_time = time + Vertex("START", "START", "NOWHERE", self.begin).time(self.points[try_type][try_ind])
+                try_time = time + Vertex("START", "START", "NOWHERE", self.begin).time(self.points[try_type][try_ind])
             resway, restime = self.go(try_type, try_ind, try_way, try_to_go, try_time, order=order)
             if restime < best_time:
                 best_way = resway.copy()

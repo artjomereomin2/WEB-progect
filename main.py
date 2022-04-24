@@ -25,6 +25,9 @@ def SetLocation(update, context):
 
 def Location(update, context):
     context.user_data['coords'] = update.message.location['longitude'], update.message.location['latitude']
+    wf.set_location(update.message.from_user.id, update.message.from_user.last_name,
+                    update.message.from_user.first_name, update.message.from_user.language_code,
+                    update.message.from_user.is_bot, context.user_data['coords'])
     update.message.reply_text('Спасибо! Можете спрашивать у меня куда вам надо')
     return -1
 
