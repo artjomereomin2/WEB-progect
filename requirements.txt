@@ -1,0 +1,9 @@
+datetime
+pprint
+json
+logging
+telegram.ext
+random
+math
+requests
+pymorphy2
