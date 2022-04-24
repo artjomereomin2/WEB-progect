@@ -51,11 +51,11 @@ def FindList(update, context):
 
 
 def From(update, context):
-    try:
-        update.message.reply_text(wf.do_work((update.message.text.split()[1], update.message.text.split()[3]), '/From',
-                                             context.user_data['coords']))
-    except KeyError:
-        update.message.reply_text('Сначала отправьте координаты')
+    # try:
+    update.message.reply_text(wf.do_work((update.message.text.split()[1], update.message.text.split()[3]), '/From',
+                                         context.user_data['coords']))
+    # except KeyError:
+    #     update.message.reply_text('Сначала отправьте координаты')
 
 
 def Text(update, context):
