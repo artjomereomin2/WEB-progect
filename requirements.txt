@@ -7,3 +7,4 @@ random
 math
 requests
 pymorphy2
+sqlite3

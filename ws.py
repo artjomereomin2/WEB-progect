@@ -7,6 +7,7 @@ from bigbrain import flashsort
 from pprint import pprint
 from datetime import timedelta
 from keys import KEY
+import sqlite3
 
 text_analizer = GetPlaces()
 
@@ -91,9 +92,21 @@ class Vertex:
             ans.append(f"{minutes} минут")
         return ' '.join(ans)
 
-
-def normal_time(hours):
-    return f'Идти {int(hours * 60)} минут'
+#TODO Проверить работу
+def normal_time(sec):
+    res = timedelta(seconds=sec)
+    days = res.days
+    seconds = res.seconds
+    hours = (seconds % (3600 * 24)) // 3600
+    minutes = seconds % 60
+    ans = ['Идти']
+    if days:
+        ans.append(f"{days} дней")
+    if hours:
+        ans.append(f"{hours} часов")
+    if minutes:
+        ans.append(f"{minutes} минут")
+    return ans
 
 
 class WayFinder:
@@ -101,8 +114,24 @@ class WayFinder:
         self.update = None
         self.time = 0
 
+    def set_location(self, id, last_name, first_name, lang, is_bot, coords):
+        con = sqlite3.connect("peoples.sqlite")
+        cur = con.cursor()
+        try:
+            cur.execute(
+                f'''INSERT INTO information VALUES({id},"{last_name}","{first_name}","{lang}",{int(is_bot)},{coords[0]},{coords[1]})''')
+        except sqlite3.IntegrityError:
+            cur.execute(
+                f'''UPDATE information SET longitude = {coords[0]} WHERE id = {id}''')
+            cur.execute(
+                f'''UPDATE information SET latitude = {coords[1]} WHERE id = {id}''')
+        con.commit()
+        con.close()
+
     def do_work(self, text, command_type, coords=None, update=None):
         self.update = update
+        # places = text_analizer.where_to_go(text, command_type)
+        # print(text, command_type)
         goodness = 10
         line = '\n'
         if command_type == '/FindOne':
