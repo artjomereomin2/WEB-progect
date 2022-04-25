@@ -45,9 +45,7 @@ def flashsort(a, key=ex_key):
     half = []
     for i in range(n):
         x1, y1, z1 = key(a[i]), key(mn), key(mx)
-        print(x1, y1, z1)
         x, y, z = f(x1, y1, z1), f(y1, y1, z1), f(z1, y1, z1)
-        print(x, y, z)
         ind = max(0, min(m - 1, int((x - y) * (m - 1) / (z - y))))
         buckets[ind].append(a[i])
         if len(buckets[ind]) >= n // 2:
