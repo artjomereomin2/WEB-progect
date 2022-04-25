@@ -13,8 +13,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-wf = WayFinder()
-
 
 # Определяем функцию-обработчик сообщений.
 # У неё два параметра, сам бот и класс updater, принявший сообщение.
@@ -37,20 +35,28 @@ def SetLocation(update, context):
 
 def Location(update, context):
     context.user_data['coords'] = update.message.location['longitude'], update.message.location['latitude']
+    context.user_data['way'] = WayFinder()
+    context.user_data['way'].set_location(update.message.from_user.id, update.message.from_user.last_name,
+                                          update.message.from_user.first_name, update.message.from_user.language_code,
+                                          update.message.from_user.is_bot, context.user_data['coords'])
     update.message.reply_text('Спасибо! Можете спрашивать у меня куда вам надо')
     return -1
 
 
 def FindOne(update, context):  # +
     try:
-        update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindOne', context.user_data['coords']))
+        update.message.reply_text(
+            context.user_data['way'].do_work(update.message.text.split()[1:], '/FindOne', update.message.from_user.id,
+                                             context.user_data['coords']))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
 def FindAny(update, context):  # +
     try:
-        update.message.reply_text(wf.do_work(update.message.text.split()[1:], '/FindAny', context.user_data['coords']))
+        update.message.reply_text(
+            context.user_data['way'].do_work(update.message.text.split()[1:], '/FindAny', update.message.from_user.id,
+                                             context.user_data['coords']))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
@@ -58,8 +64,9 @@ def FindAny(update, context):  # +
 def FindList(update, context):  # +
     try:
         update.message.reply_text(
-            wf.do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindList', context.user_data['coords'],
-                       update))
+            context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindList',
+                                             update.message.from_user.id, context.user_data['coords'],
+                                             update))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
@@ -67,13 +74,14 @@ def FindList(update, context):  # +
 def FindOrder(update, context):  # +
     try:
         update.message.reply_text(
-            wf.do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindOrder', context.user_data['coords'],
-                       update))
+            context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindOrder',
+                                             update.message.from_user.id, context.user_data['coords'],
+                                             update))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
-def From(update, context):  # TODO адреса не работают
+def From(update, context):
     try:
         text = update.message.text
         begin = []
@@ -86,7 +94,9 @@ def From(update, context):  # TODO адреса не работают
                 end.append(word)
             else:
                 begin.append(word)
-        update.message.reply_text(wf.do_work((' '.join(begin), ' '.join(end)), '/From',
+        print(context.user_data['coords'])
+        update.message.reply_text(
+            context.user_data['way'].do_work((' '.join(begin), ' '.join(end)), '/From', update.message.from_user.id,
                                              context.user_data['coords']))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
@@ -94,7 +104,12 @@ def From(update, context):  # TODO адреса не работают
 
 def Text(update, context):  # ++-
     update.message.reply_text(
-        wf.do_work(' '.join(update.message.text.split()[1:]), '/Text', context.user_data['coords'], update))
+        context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]), '/Text',
+                                         update.message.from_user.id, context.user_data['coords'], update))
+
+
+def something(update, context):
+    Text(update, context)
 
 
 def main():
@@ -117,6 +132,7 @@ def main():
     dp.add_handler(CommandHandler('From', From))
     dp.add_handler(CommandHandler('Text', Text))
     dp.add_handler(CommandHandler('Help', Help))
+    dp.add_handler(MessageHandler(Filters.text, something))
 
     updater.start_polling()
 

@@ -7,6 +7,7 @@ from bigbrain import flashsort
 from pprint import pprint
 from datetime import timedelta
 from keys import KEY
+import sqlite3
 
 text_analizer = GetPlaces()
 
@@ -31,10 +32,16 @@ def GeoFind(name, near, ammount):
     points = []
     for i in response['features']:
         coords = i['geometry']['coordinates']
-        points.append(
-            Vertex(i['properties']['CompanyMetaData']['name'],
-                   i['properties']['CompanyMetaData']['Categories'][0]['name'],
-                   i['properties']['CompanyMetaData']['address'], coords))
+        try:
+            points.append(
+                Vertex(i['properties']['CompanyMetaData']['name'],
+                       i['properties']['CompanyMetaData']['Categories'][0]['name'],
+                       i['properties']['CompanyMetaData']['address'], coords))
+        except KeyError:
+            points.append(
+                Vertex(i['properties']['name'],
+                       'Дом',
+                       i['properties']['name'], coords))
     return points
 
 
@@ -93,7 +100,21 @@ class Vertex:
 
 
 def normal_time(hours):
-    return f'Идти {int(hours * 60)} минут'
+    sec = int(hours * 3600)
+    days = sec // (3600 * 24)
+    sec -= days * 3600 * 24
+    hours = sec // 3600
+    sec -= hours * 3600
+    minutes = sec // 60
+    sec -= minutes * 60
+    ans = ['Идти']
+    if days:
+        ans.append(f"{days} дней")
+    if hours:
+        ans.append(f"{hours} часов")
+    if minutes:
+        ans.append(f"{minutes} минут")
+    return ' '.join(ans)
 
 
 class WayFinder:
@@ -101,8 +122,32 @@ class WayFinder:
         self.update = None
         self.time = 0
 
-    def do_work(self, text, command_type, coords=None, update=None):
+    def set_location(self, id, last_name, first_name, lang, is_bot, coords):
+        con = sqlite3.connect("peoples.sqlite")
+        cur = con.cursor()
+        try:
+            cur.execute(
+                f'''INSERT INTO information VALUES({id},"{last_name}","{first_name}","{lang}",{int(is_bot)},{coords[0]},{coords[1]})''')
+        except sqlite3.IntegrityError:
+            cur.execute(
+                f'''UPDATE information SET longitude = {coords[0]} WHERE id = {id}''')
+            cur.execute(
+                f'''UPDATE information SET latitude = {coords[1]} WHERE id = {id}''')
+        con.commit()
+        con.close()
+
+    def do_work(self, text, command_type, id, coords=None, update=None):
         self.update = update
+        # places = text_analizer.where_to_go(text, command_type)
+        # print(text, command_type)
+
+        con = sqlite3.connect("peoples.sqlite")
+        cur = con.cursor()
+        cur.execute(
+            f'''INSERT INTO requests(id_pers,request) VALUES({id},"{command_type + ' ' + ' '.join(text)}")''')
+        con.commit()
+        con.close()
+
         goodness = 10
         line = '\n'
         if command_type == '/FindOne':
@@ -122,7 +167,7 @@ class WayFinder:
                 res.append(place[0])
             return f'Найдены следующие результаты:\n{line.join(res)}'
         if command_type == '/From':
-            now = GeoFind(text[0], coords, 1)[0]
+            now = GeoFind(text[0], coords, 1)[0].location
             points = {text[1]: GeoFind(text[1], coords, goodness)}
             way, time = self.find([text[1]], points, now)
             return f"Маршрут построен:\nИз {way[0].__repr__()} . {normal_time(time)}."
