@@ -1,5 +1,4 @@
 datetime
-pprint
 json
 logging
 telegram.ext
@@ -7,4 +6,4 @@ random
 math
 requests
 pymorphy2
-sqlite3
+sqlalchemy
