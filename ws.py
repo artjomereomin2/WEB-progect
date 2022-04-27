@@ -121,7 +121,6 @@ def normal_time(hours):
 
 class WayFinder:
     def __init__(self):
-        self.update = None
         self.time = 0
 
     def add_user(self, id, last_name, first_name, lang, is_bot, db_sess):

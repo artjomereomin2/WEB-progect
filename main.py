@@ -135,7 +135,7 @@ def Text(update, context):  # ++-
     try:
         funcs.append(context.user_data['way'].do_work)
         args.append([' '.join(update.message.text.split()[1:]), '/Text',
-                     update.message.from_user.id, context.user_data['coords'], update])
+                     update.message.from_user.id, db_sess, context.user_data['coords'], update])
     except KeyError:
         db_sess.rollback()
         update.message.reply_text('Сначала отправьте координаты')
@@ -145,9 +145,13 @@ def Text(update, context):  # ++-
 
 
 def something(update, context):
-    funcs.append(context.user_data['way'].do_work)
-    args.append([' '.join(update.message.text.split()), '/Text',
-                 update.message.from_user.id, context.user_data['coords'], update])
+    try:
+        funcs.append(context.user_data['way'].do_work)
+        args.append([' '.join(update.message.text.split()), '/Text',
+                     update.message.from_user.id, db_sess, context.user_data['coords'], update])
+    except KeyError:
+        db_sess.rollback()
+        update.message.reply_text('Сначала отправьте координаты')
     '''tasks.append(asyncio.create_task(
         context.user_data['way'].do_work(' '.join(update.message.text.split()), '/Text',
                                          update.message.from_user.id, context.user_data['coords'],update=update)))'''
