@@ -1,9 +1,11 @@
-import datetime
+from datetime import timedelta
 import json
 import logging
-from telegram.ext import Updater, MessageHandler, Filters, CommandHandler, ConversationHandler
+from telegram.ext import Updater, MessageHandler, Filters, CommandHandler, ConversationHandler, JobQueue
 from ws import WayFinder
 from keys import TOKEN
+import schedule
+import asyncio
 from pprint import pprint
 
 # Запускаем логгирование
@@ -45,38 +47,36 @@ def Location(update, context):
 
 def FindOne(update, context):  # +
     try:
-        update.message.reply_text(
+        tasks.append(asyncio.create_task(
             context.user_data['way'].do_work(update.message.text.split()[1:], '/FindOne', update.message.from_user.id,
-                                             context.user_data['coords']))
+                                             context.user_data['coords'],update=update)))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
 def FindAny(update, context):  # +
     try:
-        update.message.reply_text(
+        tasks.append(asyncio.create_task(
             context.user_data['way'].do_work(update.message.text.split()[1:], '/FindAny', update.message.from_user.id,
-                                             context.user_data['coords']))
+                                             context.user_data['coords'],update=update)))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
 def FindList(update, context):  # +
     try:
-        update.message.reply_text(
+        tasks.append(asyncio.create_task(
             context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindList',
-                                             update.message.from_user.id, context.user_data['coords'],
-                                             update))
+                                             update.message.from_user.id, context.user_data['coords'],update=update)))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
 def FindOrder(update, context):  # +
     try:
-        update.message.reply_text(
+        tasks.append(asyncio.create_task(
             context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindOrder',
-                                             update.message.from_user.id, context.user_data['coords'],
-                                             update))
+                                             update.message.from_user.id, context.user_data['coords'],update=update)))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
@@ -94,25 +94,40 @@ def From(update, context):
                 end.append(word)
             else:
                 begin.append(word)
-        print(context.user_data['coords'])
-        update.message.reply_text(
+        # print(context.user_data['coords'])
+        tasks.append(asyncio.create_task(
             context.user_data['way'].do_work((' '.join(begin), ' '.join(end)), '/From', update.message.from_user.id,
-                                             context.user_data['coords']))
+                                             context.user_data['coords'],update=update)))
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
 def Text(update, context):  # ++-
-    update.message.reply_text(
+    tasks.append(asyncio.create_task(
         context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]), '/Text',
-                                         update.message.from_user.id, context.user_data['coords'], update))
+                                         update.message.from_user.id, context.user_data['coords'],update=update)))
 
 
 def something(update, context):
-    Text(update, context)
+    try:
+        tasks.append(asyncio.create_task(
+            context.user_data['way'].do_work(' '.join(update.message.text.split()), '/Text',
+                                             update.message.from_user.id, context.user_data['coords'],update=update)))
+    except Exception as e:
+        print(e) #???
+
+
+def do_tasks(context):
+    global tasks
+    if tasks:
+        asyncio.gather(*tasks)
+    tasks = []
 
 
 def main():
+    global tasks
+    tasks = []
+
     updater = Updater(TOKEN)
 
     dp = updater.dispatcher
@@ -125,6 +140,7 @@ def main():
     )
 
     dp.add_handler(conv_handler)
+    dp.add_handler(CommandHandler('Start', Help))
     dp.add_handler(CommandHandler('FindOne', FindOne))
     dp.add_handler(CommandHandler('FindAny', FindAny))
     dp.add_handler(CommandHandler('FindList', FindList))
@@ -136,6 +152,13 @@ def main():
 
     updater.start_polling()
 
+    jobq = JobQueue()
+
+    jobq.set_dispatcher(dp)
+
+    jobq.run_repeating(callback=do_tasks, interval=timedelta(seconds=5))
+
+    jobq.start()
     # Ждём завершения приложения.
     # (например, получения сигнала SIG_TERM при нажатии клавиш Ctrl+C)
     updater.idle()
