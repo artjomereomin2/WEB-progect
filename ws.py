@@ -7,7 +7,10 @@ from bigbrain import flashsort
 from pprint import pprint
 from datetime import timedelta
 from keys import KEY
-import sqlite3
+from data import db_session
+from data.users import User
+from data.requests import Requests
+import sqlalchemy
 
 text_analizer = GetPlaces()
 
@@ -122,31 +125,38 @@ class WayFinder:
         self.update = None
         self.time = 0
 
-    def set_location(self, id, last_name, first_name, lang, is_bot, coords):
-        con = sqlite3.connect("peoples.sqlite")
-        cur = con.cursor()
+    def add_user(self, id, last_name, first_name, lang, is_bot, db_sess):
         try:
-            cur.execute(
-                f'''INSERT INTO information VALUES({id},"{last_name}","{first_name}","{lang}",{int(is_bot)},{coords[0]},{coords[1]})''')
-        except sqlite3.IntegrityError:
-            cur.execute(
-                f'''UPDATE information SET longitude = {coords[0]} WHERE id = {id}''')
-            cur.execute(
-                f'''UPDATE information SET latitude = {coords[1]} WHERE id = {id}''')
-        con.commit()
-        con.close()
+            user = User()
+            user.id = id
+            user.last_name = last_name
+            user.first_name = first_name
+            user.lang = lang
+            user.is_bot = int(is_bot)
+            db_sess.add(user)
+            db_sess.commit()
+        except sqlalchemy.exc.IntegrityError:
+            db_sess.rollback()
 
-    def do_work(self, text, command_type, id, coords=None, update=None):
+    def set_location(self, id, coords, db_sess):
+        user = db_sess.query(User).filter(User.id == id).first()
+        user.longitude = coords[0]
+        user.latitude = coords[1]
+        db_sess.commit()
+
+    def do_work(self, text, command_type, id, db_sess, coords=None, update=None):
         self.update = update
         # places = text_analizer.where_to_go(text, command_type)
         # print(text, command_type)
 
-        con = sqlite3.connect("peoples.sqlite")
-        cur = con.cursor()
-        cur.execute(
-            f'''INSERT INTO requests(id_pers,request) VALUES({id},"{command_type + ' ' + ' '.join(text)}")''')
-        con.commit()
-        con.close()
+        request = Requests()
+        request.user_id = id
+        if command_type != 'From':
+            request.request = command_type + ' ' + ' '.join(text)
+        else:
+            request.request = command_type + ' ' + text[0] + ' to ' + text[1]
+        db_sess.add(request)
+        db_sess.commit()
 
         goodness = 10
         line = '\n'
@@ -176,13 +186,15 @@ class WayFinder:
             points = {place_name: GeoFind(place_name, coords, goodness) for place_name in text}
             way, time = self.find(text, points, now)
             res = [f"*-{way[i]}" for i in range(len(way))]
-            return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} без учёта времени пребывания на местах."
+            return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)}" \
+                   f" без учёта времени пребывания на местах."
         if command_type == '/FindOrder':
             now = coords
             points = {place_name: GeoFind(place_name, coords, goodness) for place_name in text}
             way, time = self.find(text, points, now, order=True)
             res = [f"*-{way[i]}" for i in range(len(way))]
-            return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} без учёта времени пребывания на местах."
+            return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} " \
+                   f"без учёта времени пребывания на местах."
         if command_type == '/Text':
             to_find = text_analizer.where_to_go(text)
             now = coords
@@ -190,7 +202,8 @@ class WayFinder:
             way, time = self.find(to_find, points, now)
 
             res = [f"*-{way[i]}" for i in range(len(way))]
-            return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} без учёта времени пребывания на местах."
+            return f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} " \
+                   f"без учёта времени пребывания на местах."
 
     def find(self, to_go, points, start, order=False):
         self.points = points
