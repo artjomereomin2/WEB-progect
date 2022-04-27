@@ -3,7 +3,7 @@ import json
 import logging
 from telegram.ext import Updater, MessageHandler, Filters, CommandHandler, ConversationHandler, JobQueue
 from telegram import ReplyKeyboardMarkup
-from ws import WayFinder
+from ws import WayFinder, GeoFind, markup_function
 from keys import TOKEN
 import asyncio
 import os
@@ -21,16 +21,9 @@ logger = logging.getLogger(__name__)
 # Определяем функцию-обработчик сообщений.
 # У неё два параметра, сам бот и класс updater, принявший сообщение.
 def Help(update, context):
-    k = list(map(lambda x: x.request,
-                               list(db_sess.query(Requests).filter(Requests.user_id == update.message.from_user.id))))
-    if len(k) > 2:
-        k = k[-2:]
-    reply_keyboard = [['/SetLocation', '/help'],
-                      k]
-    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
     update.message.reply_text(
         'Я волшебный колобок и я проведу вас по этому страшному лабиринту.'
-        '\nВот, что я могу:\n/SetLocation ...(геолокация) - Задаёт начальное местоположение'
+        '\nВот, что я могу:\n/SetLocation ...(геолокация) или /SetAddress ...(адрес) - Задаёт начальное местоположение'
         '\n/FindOne ... - Ищет ближайший объект, указанный после команды, оценивает время до него'
         '\n/FindAny ...(количество) ...(объект) - Ищет ближайшие объекты, количество и тип которых указано после '
         'команды, оценивает время до них'
@@ -38,7 +31,8 @@ def Help(update, context):
         '\n/From ...(место откуда) to ...(место куда) - Оценивает время пути между 2 точками'
         '\n/Text ...(предложение) - Расапознаёт запрос пользователя и сообщает куда и как долго ему нужно идти'
         '\n/FindOrder <место1>, <место2>... - ищет места для посещения в порядке, например если человек хочет '
-        'сходить в кино, а затем поужинать, он напишет /FindOrder кино, кафе', reply_markup=markup)
+        'сходить в кино, а затем поужинать, он напишет /FindOrder кино, кафе',
+        reply_markup=markup_function(update.message.from_user.id, db_sess))
 
 
 def SetLocation(update, context):
@@ -47,98 +41,136 @@ def SetLocation(update, context):
 
 
 def Location(update, context):
+    ws = WayFinder()
     context.user_data['coords'] = update.message.location['longitude'], update.message.location['latitude']
     print(context.user_data['coords'])
-    context.user_data['way'].set_location(update.message.from_user.id, context.user_data['coords'], db_sess)
+    ws.set_location(update.message.from_user.id, context.user_data['coords'], db_sess)
     update.message.reply_text('Спасибо! Можете спрашивать у меня куда вам надо')
     return -1
 
 
+def SetAddress(update, context):
+    update.message.reply_text('Отправьте свой адрес')
+    return 1
+
+
+def Adderss(update, context):
+    ws = WayFinder()
+    gf = GeoFind(''.join(update.message.text.split()[1:]))
+    if not gf:
+        update.message.reply_text('Я вас не понимаю(. Попробуйте ещё раз')
+        return 1
+    else:
+        context.user_data['coords'] = gf[0].location
+        print(context.user_data['coords'])
+        ws.set_location(update.message.from_user.id, context.user_data['coords'], db_sess)
+        update.message.reply_text('Спасибо! Можете спрашивать у меня куда вам надо')
+        return -1
+
+
 def FindOne(update, context):  # +
     try:
-        funcs.append(context.user_data['way'].do_work)
-        args.append([update.message.text.split()[1:], '/FindOne', update.message.from_user.id, db_sess,
-                     context.user_data['coords'], update])
-        """tasks.append(asyncio.create_task(
-            context.user_data['way'].do_work(update.message.text.split()[1:], '/FindOne', update.message.from_user.id,
-                                             context.user_data['coords'],update=update)))"""
+        context.user_data['coords']
     except KeyError:
         db_sess.rollback()
         update.message.reply_text('Сначала отправьте координаты')
+        return
+    ws = WayFinder()
+    funcs.append(ws.do_work)
+    args.append([update.message.text.split()[1:], '/FindOne', update.message.from_user.id, db_sess,
+                 context.user_data['coords'], update])
+    """tasks.append(asyncio.create_task(
+        context.user_data['way'].do_work(update.message.text.split()[1:], '/FindOne', update.message.from_user.id,
+                                         context.user_data['coords'],update=update)))"""
 
 
 def FindAny(update, context):  # +
     try:
-        funcs.append(context.user_data['way'].do_work)
-        args.append([update.message.text.split()[1:], '/FindAny', update.message.from_user.id, db_sess,
-                     context.user_data['coords'], update])
-        """tasks.append(asyncio.create_task(
-            context.user_data['way'].do_work(update.message.text.split()[1:], '/FindAny', update.message.from_user.id,
-                                             context.user_data['coords'],update=update)))"""
+        context.user_data['coords']
     except KeyError:
         db_sess.rollback()
         update.message.reply_text('Сначала отправьте координаты')
+        return
+    ws = WayFinder()
+    funcs.append(ws.do_work)
+    args.append([update.message.text.split()[1:], '/FindAny', update.message.from_user.id, db_sess,
+                 context.user_data['coords'], update])
+    """tasks.append(asyncio.create_task(
+        context.user_data['way'].do_work(update.message.text.split()[1:], '/FindAny', update.message.from_user.id,
+                                         context.user_data['coords'],update=update)))"""
 
 
 def FindList(update, context):  # +
     try:
-        funcs.append(context.user_data['way'].do_work)
-        args.append([' '.join(update.message.text.split()[1:]).split(','), '/FindList',
-                     update.message.from_user.id, db_sess, context.user_data['coords'], update])
-        """tasks.append(asyncio.create_task(
-            context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindList',
-                                             update.message.from_user.id, context.user_data['coords'],update=update)))"""
+        context.user_data['coords']
     except KeyError:
         db_sess.rollback()
         update.message.reply_text('Сначала отправьте координаты')
+        return
+    ws = WayFinder()
+    funcs.append(ws.do_work)
+    args.append([' '.join(update.message.text.split()[1:]).split(','), '/FindList',
+                 update.message.from_user.id, db_sess, context.user_data['coords'], update])
+    """tasks.append(asyncio.create_task(
+        context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindList',
+                                         update.message.from_user.id, context.user_data['coords'],update=update)))"""
 
 
 def FindOrder(update, context):  # +
     try:
-        funcs.append(context.user_data['way'].do_work)
-        args.append([' '.join(update.message.text.split()[1:]).split(','), '/FindOrder',
-                     update.message.from_user.id, db_sess, context.user_data['coords'], update])
-        """tasks.append(asyncio.create_task(
-            context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindOrder',
-                                             update.message.from_user.id, context.user_data['coords'],update=update)))"""
+        context.user_data['coords']
     except KeyError:
         db_sess.rollback()
         update.message.reply_text('Сначала отправьте координаты')
+        return
+    ws = WayFinder()
+    funcs.append(ws.do_work)
+    args.append([' '.join(update.message.text.split()[1:]).split(','), '/FindOrder',
+                 update.message.from_user.id, db_sess, context.user_data['coords'], update])
+    """tasks.append(asyncio.create_task(
+        context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindOrder',
+                                         update.message.from_user.id, context.user_data['coords'],update=update)))"""
 
 
 def From(update, context):
     try:
-        text = update.message.text
-        begin = []
-        end = []
-        has_to = False
-        for word in text.split()[1:]:
-            if word == 'to':
-                has_to = True
-            elif has_to:
-                end.append(word)
-            else:
-                begin.append(word)
-        # print(context.user_data['coords'])
-        funcs.append(context.user_data['way'].do_work)
-        args.append([(' '.join(begin), ' '.join(end)), '/From', update.message.from_user.id, db_sess,
-                     context.user_data['coords'], update])
-        """tasks.append(asyncio.create_task(
-            context.user_data['way'].do_work((' '.join(begin), ' '.join(end)), '/From', update.message.from_user.id,
-                                             context.user_data['coords'],update=update)))"""
+        context.user_data['coords']
     except KeyError:
         db_sess.rollback()
         update.message.reply_text('Сначала отправьте координаты')
+        return
+    ws = WayFinder()
+    text = update.message.text
+    begin = []
+    end = []
+    has_to = False
+    for word in text.split()[1:]:
+        if word == 'to':
+            has_to = True
+        elif has_to:
+            end.append(word)
+        else:
+            begin.append(word)
+    # print(context.user_data['coords'])
+    funcs.append(ws.do_work)
+    args.append([(' '.join(begin), ' '.join(end)), '/From', update.message.from_user.id, db_sess,
+                 context.user_data['coords'], update])
+    """tasks.append(asyncio.create_task(
+        context.user_data['way'].do_work((' '.join(begin), ' '.join(end)), '/From', update.message.from_user.id,
+                                         context.user_data['coords'],update=update)))"""
 
 
 def Text(update, context):  # ++-
     try:
-        funcs.append(context.user_data['way'].do_work)
-        args.append([' '.join(update.message.text.split()[1:]), '/Text',
-                     update.message.from_user.id, db_sess, context.user_data['coords'], update])
+        context.user_data['coords']
     except KeyError:
         db_sess.rollback()
         update.message.reply_text('Сначала отправьте координаты')
+        return
+    ws = WayFinder()
+    funcs.append(ws.do_work)
+    args.append([update.message.text.split()[1:], '/Text',
+                 update.message.from_user.id, db_sess, context.user_data['coords'], update])
     """tasks.append(asyncio.create_task(
         context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]), '/Text',
                                          update.message.from_user.id, context.user_data['coords'],update=update)))"""
@@ -146,12 +178,15 @@ def Text(update, context):  # ++-
 
 def something(update, context):
     try:
-        funcs.append(context.user_data['way'].do_work)
-        args.append([' '.join(update.message.text.split()), '/Text',
-                     update.message.from_user.id, db_sess, context.user_data['coords'], update])
+        context.user_data['coords']
     except KeyError:
         db_sess.rollback()
         update.message.reply_text('Сначала отправьте координаты')
+        return
+    ws = WayFinder()
+    funcs.append(ws.do_work)
+    args.append([update.message.text.split(), '/Text',
+                 update.message.from_user.id, db_sess, context.user_data['coords'], update])
     '''tasks.append(asyncio.create_task(
         context.user_data['way'].do_work(' '.join(update.message.text.split()), '/Text',
                                          update.message.from_user.id, context.user_data['coords'],update=update)))'''
@@ -164,6 +199,7 @@ args = []
 async def do_tasks1():
     global tasks, funcs, args
     for i in range(len(funcs)):
+        print(funcs, args)
         tasks.append(asyncio.create_task(funcs[i](*args[i])))
     if tasks:
         await asyncio.gather(*tasks)
@@ -177,8 +213,8 @@ def do_tasks(context):
 
 
 def start(update, context):
-    context.user_data['way'] = WayFinder()
-    context.user_data['way'].add_user(update.message.from_user.id, update.message.from_user.last_name,
+    ws = WayFinder()
+    ws.add_user(update.message.from_user.id, update.message.from_user.last_name,
                                       update.message.from_user.first_name, update.message.from_user.language_code,
                                       update.message.from_user.is_bot, db_sess)
     Help(update, context)
@@ -198,8 +234,16 @@ def main():
         },
         fallbacks=[]
     )
+    conv_handler_1 = ConversationHandler(
+        entry_points=[CommandHandler('SetAddress', SetAddress)],
+        states={
+            1: [MessageHandler(Filters.text & ~Filters.command, Adderss)]
+        },
+        fallbacks=[]
+    )
 
     dp.add_handler(conv_handler)
+    dp.add_handler(conv_handler_1)
     dp.add_handler(CommandHandler('FindOne', FindOne))
     dp.add_handler(CommandHandler('FindAny', FindAny))
     dp.add_handler(CommandHandler('FindList', FindList))
@@ -216,7 +260,7 @@ def main():
 
     jobq.set_dispatcher(dp)
 
-    jobq.run_repeating(callback=do_tasks, interval=timedelta(seconds=5))
+    jobq.run_repeating(callback=do_tasks, interval=timedelta(seconds=2))
 
     jobq.start()
     # Ждём завершения приложения.

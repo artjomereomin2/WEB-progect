@@ -12,40 +12,56 @@ from data import db_session
 from data.users import User
 from data.requests import Requests
 import sqlalchemy
+from telegram import ReplyKeyboardMarkup
 
 text_analizer = GetPlaces()
 
-def GeoFind(name, near, ammount):
-    search_api_server = "https://search-maps.yandex.ru/v1/"
-    near_1, near_2 = near
-    near = str(near_1) + ',' + str(near_2)
 
-    search_params = {
-        "apikey": KEY,
-        "text": name,
-        "lang": "ru_RU",
-        "ll": near,
-        "spn": "0.1,0.1",
-        "results": ammount
-    }
+def markup_function(id, db_sess):
+    k = list(map(lambda x: x.request,
+                 list(db_sess.query(Requests).filter(Requests.user_id == id))))
+    if len(k) > 3:
+        k = k[-3:]
+    reply_keyboard = [['/SetLocation', '/SetAddress', '/help'],
+                      k]
+    return ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
 
-    response = requests.get(search_api_server, params=search_params).json()
-    if not response:
-        pass
-    points = []
-    for i in response['features']:
-        coords = i['geometry']['coordinates']
-        try:
-            points.append(
-                Vertex(i['properties']['CompanyMetaData']['name'],
-                       i['properties']['CompanyMetaData']['Categories'][0]['name'],
-                       i['properties']['CompanyMetaData']['address'], coords))
-        except KeyError:
-            points.append(
-                Vertex(i['properties']['name'],
-                       'Дом',
-                       i['properties']['name'], coords))
-    return points
+
+def GeoFind(name, near=(45.929773, 51.554219), ammount=5):
+    try:
+        search_api_server = "https://search-maps.yandex.ru/v1/"
+        near_1, near_2 = near
+        near = str(near_1) + ',' + str(near_2)
+
+        search_params = {
+            "apikey": KEY,
+            "text": name,
+            "lang": "ru_RU",
+            "ll": near,
+            "spn": "0.1,0.1",
+            "results": ammount
+        }
+
+        response = requests.get(search_api_server, params=search_params).json()
+        if not response:
+            pass
+        points = []
+        for i in response['features']:
+            coords = i['geometry']['coordinates']
+            try:
+                points.append(
+                    Vertex(i['properties']['CompanyMetaData']['name'],
+                           name,
+                           i['properties']['CompanyMetaData']['address'], coords))
+            except KeyError:
+                points.append(
+                    Vertex(i['properties']['name'],
+                           name,
+                           i['properties']['name'], coords))
+        return points
+    except Exception:
+        return False
+
 
 class Vertex:
     def __init__(self, name, type, address, location):  # название, адресс, координаты
@@ -110,6 +126,7 @@ def normal_time(hours):
     minutes = sec // 60
     sec -= minutes * 60
     ans = ['Идти']
+    iss = False
     if days:
         ans.append(f"{days} дней")
     if hours:
@@ -143,6 +160,12 @@ class WayFinder:
         db_sess.commit()
 
     async def do_work(self, text, command_type, id, db_sess, coords, update):
+        try:
+            a, b = coords
+        except Exception:
+            update.message.reply_text('Сначала отправьте координаты')
+            return
+
         self.update = update
 
         request = Requests()
@@ -159,46 +182,65 @@ class WayFinder:
         to_say = None
         if command_type == '/FindOne':
             points = GeoFind(' '.join(text), coords, goodness)
-            res = flashsort(points, key=lambda x: Vertex('line', 'line', 'line', coords).time(x))[0]
-            time = Vertex('line', 'line', 'line', coords).time(res)
-            to_say =  f'Объект найден:\n{res}. {normal_time(time)}'
+            if not points:
+                to_say = 'Я вас не понимаю('
+            else:
+                res = flashsort(points, key=lambda x: Vertex('line', 'line', 'line', coords).time(x))[0]
+                time = Vertex('line', 'line', 'line', coords).time(res)
+                to_say = f'Объект найден:\n{res}. {normal_time(time)}'
         if command_type == '/FindAny':
             points = GeoFind(' '.join(text[1:]), coords, text[0])
-            ansewrs = []
-            for point in points:
-                ansewrs.append((f"*-{point}. {Vertex('line', 'line', 'line', coords).timeRepr(point)}",
-                                Vertex('line', 'line', 'line', coords).time(point)))
-            ansewrs = flashsort(ansewrs, key=lambda x: x[1])
-            res = []
-            for place in ansewrs:
-                res.append(place[0])
-            to_say = f'Найдены следующие результаты:\n{line.join(res)}'
+            if not points:
+                to_say = 'Я вас не понимаю('
+            else:
+                ansewrs = []
+                for point in points:
+                    ansewrs.append((f"*-{point}. {Vertex('line', 'line', 'line', coords).timeRepr(point)}",
+                                    Vertex('line', 'line', 'line', coords).time(point)))
+                ansewrs = flashsort(ansewrs, key=lambda x: x[1])
+                res = []
+                for place in ansewrs:
+                    res.append(place[0])
+                to_say = f'Найдены следующие результаты:\n{line.join(res)}'
         if command_type == '/From':
             now = GeoFind(text[0], coords, 1)[0].location
-            points = {text[1]: GeoFind(text[1], coords, goodness)}
-            way, time = await self.find([text[1]], points, now)
-            return f"Маршрут построен:\nИз {way[0].__repr__()} . {normal_time(time)}."
+            if not now:
+                to_say = 'Я вас не понимаю('
+            else:
+                points = {text[1]: GeoFind(text[1], coords, goodness)}
+                way, time = await self.find([text[1]], points, now)
+                return f"Маршрут построен:\nИз {way[0].__repr__()} . {normal_time(time)}."
         if command_type == '/FindList':
             now = coords
             points = {place_name: GeoFind(place_name, coords, goodness) for place_name in text}
-            way, time = await self.find(text, points, now)
-            res = [f"*-{way[i]}" for i in range(len(way))]
-            to_say = f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} без учёта времени пребывания на местах."
+            if not points:
+                to_say = 'Я вас не понимаю('
+            else:
+                way, time = await self.find(text, points, now)
+                res = [f"*-{way[i]}" for i in range(len(way))]
+                to_say = f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} без учёта времени пребывания на местах."
         if command_type == '/FindOrder':
             now = coords
             points = {place_name: GeoFind(place_name, coords, goodness) for place_name in text}
-            way, time = await self.find(text, points, now, order=True)
-            res = [f"*-{way[i]}" for i in range(len(way))]
-            to_say = f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} без учёта времени пребывания на местах."
+            if not points:
+                to_say = 'Я вас не понимаю('
+            else:
+                way, time = await self.find(text, points, now, order=True)
+                res = [f"*-{way[i]}" for i in range(len(way))]
+                to_say = f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} без учёта времени пребывания на местах."
         if command_type == '/Text':
-            to_find = text_analizer.where_to_go(text)
+            to_find = text_analizer.where_to_go(' '.join(text))
+            print(to_find)
             now = coords
             points = {place_name: GeoFind(place_name, coords, goodness) for place_name in to_find}
-            way, time = await self.find(to_find, points, now)
+            if not points:
+                to_say = 'Я вас не понимаю('
+            else:
+                way, time = await self.find(to_find, points, now)
 
-            res = [f"*-{way[i]}" for i in range(len(way))]
-            to_say = f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} без учёта времени пребывания на местах."
-        update.message.reply_text(to_say)
+                res = [f"*-{way[i]}" for i in range(len(way))]
+                to_say = f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} без учёта времени пребывания на местах."
+        update.message.reply_text(to_say, reply_markup=markup_function(update.message.from_user.id, db_sess))
 
     async def find(self, to_go, points, start, order=False):
         self.points = points
@@ -210,7 +252,7 @@ class WayFinder:
         pass
 
     async def go(self, now_type, ind, way, to_go, time=0, order=False):
-        await asyncio.sleep(10**(-100)) #???
+        await asyncio.sleep(10 ** (-100))  # ???
         self.time += 1
         if self.time == 2 * 10 ** 5 and self.update is not None:
             self.update.message.reply_text('Ищем место поближе')
