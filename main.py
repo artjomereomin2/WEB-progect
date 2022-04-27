@@ -1,10 +1,12 @@
-import datetime
+from datetime import timedelta
 import json
 import logging
-from telegram.ext import Updater, MessageHandler, Filters, CommandHandler, ConversationHandler
+from telegram.ext import Updater, MessageHandler, Filters, CommandHandler, ConversationHandler, JobQueue
 from telegram import ReplyKeyboardMarkup
 from ws import WayFinder
 from keys import TOKEN
+import asyncio
+import os
 from data import db_session
 from data.requests import Requests
 
@@ -54,10 +56,12 @@ def Location(update, context):
 
 def FindOne(update, context):  # +
     try:
-        update.message.reply_text(
+        funcs.append(context.user_data['way'].do_work)
+        args.append([update.message.text.split()[1:], '/FindOne', update.message.from_user.id, db_sess,
+                     context.user_data['coords'], update])
+        """tasks.append(asyncio.create_task(
             context.user_data['way'].do_work(update.message.text.split()[1:], '/FindOne', update.message.from_user.id,
-                                             db_sess,
-                                             context.user_data['coords']))
+                                             context.user_data['coords'],update=update)))"""
     except KeyError:
         db_sess.rollback()
         update.message.reply_text('Сначала отправьте координаты')
@@ -65,10 +69,12 @@ def FindOne(update, context):  # +
 
 def FindAny(update, context):  # +
     try:
-        update.message.reply_text(
+        funcs.append(context.user_data['way'].do_work)
+        args.append([update.message.text.split()[1:], '/FindAny', update.message.from_user.id, db_sess,
+                     context.user_data['coords'], update])
+        """tasks.append(asyncio.create_task(
             context.user_data['way'].do_work(update.message.text.split()[1:], '/FindAny', update.message.from_user.id,
-                                             db_sess,
-                                             context.user_data['coords']))
+                                             context.user_data['coords'],update=update)))"""
     except KeyError:
         db_sess.rollback()
         update.message.reply_text('Сначала отправьте координаты')
@@ -76,10 +82,12 @@ def FindAny(update, context):  # +
 
 def FindList(update, context):  # +
     try:
-        update.message.reply_text(
+        funcs.append(context.user_data['way'].do_work)
+        args.append([' '.join(update.message.text.split()[1:]).split(','), '/FindList',
+                     update.message.from_user.id, db_sess, context.user_data['coords'], update])
+        """tasks.append(asyncio.create_task(
             context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindList',
-                                             update.message.from_user.id, db_sess, context.user_data['coords'],
-                                             update))
+                                             update.message.from_user.id, context.user_data['coords'],update=update)))"""
     except KeyError:
         db_sess.rollback()
         update.message.reply_text('Сначала отправьте координаты')
@@ -87,10 +95,12 @@ def FindList(update, context):  # +
 
 def FindOrder(update, context):  # +
     try:
-        update.message.reply_text(
+        funcs.append(context.user_data['way'].do_work)
+        args.append([' '.join(update.message.text.split()[1:]).split(','), '/FindOrder',
+                     update.message.from_user.id, db_sess, context.user_data['coords'], update])
+        """tasks.append(asyncio.create_task(
             context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindOrder',
-                                             update.message.from_user.id, db_sess, context.user_data['coords'],
-                                             update))
+                                             update.message.from_user.id, context.user_data['coords'],update=update)))"""
     except KeyError:
         db_sess.rollback()
         update.message.reply_text('Сначала отправьте координаты')
@@ -109,11 +119,13 @@ def From(update, context):
                 end.append(word)
             else:
                 begin.append(word)
-        print(context.user_data['coords'])
-        update.message.reply_text(
+        # print(context.user_data['coords'])
+        funcs.append(context.user_data['way'].do_work)
+        args.append([(' '.join(begin), ' '.join(end)), '/From', update.message.from_user.id, db_sess,
+                     context.user_data['coords'], update])
+        """tasks.append(asyncio.create_task(
             context.user_data['way'].do_work((' '.join(begin), ' '.join(end)), '/From', update.message.from_user.id,
-                                             db_sess,
-                                             context.user_data['coords']))
+                                             context.user_data['coords'],update=update)))"""
     except KeyError:
         db_sess.rollback()
         update.message.reply_text('Сначала отправьте координаты')
@@ -121,16 +133,43 @@ def From(update, context):
 
 def Text(update, context):  # ++-
     try:
-        update.message.reply_text(
-            context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]), '/Text',
-                                             update.message.from_user.id, db_sess, context.user_data['coords'], update))
+        funcs.append(context.user_data['way'].do_work)
+        args.append([' '.join(update.message.text.split()[1:]), '/Text',
+                     update.message.from_user.id, context.user_data['coords'], update])
     except KeyError:
         db_sess.rollback()
         update.message.reply_text('Сначала отправьте координаты')
+    """tasks.append(asyncio.create_task(
+        context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]), '/Text',
+                                         update.message.from_user.id, context.user_data['coords'],update=update)))"""
 
 
 def something(update, context):
-    Text(update, context)
+    funcs.append(context.user_data['way'].do_work)
+    args.append([' '.join(update.message.text.split()), '/Text',
+                 update.message.from_user.id, context.user_data['coords'], update])
+    '''tasks.append(asyncio.create_task(
+        context.user_data['way'].do_work(' '.join(update.message.text.split()), '/Text',
+                                         update.message.from_user.id, context.user_data['coords'],update=update)))'''
+
+
+funcs = []
+args = []
+
+
+async def do_tasks1():
+    global tasks, funcs, args
+    for i in range(len(funcs)):
+        tasks.append(asyncio.create_task(funcs[i](*args[i])))
+    if tasks:
+        await asyncio.gather(*tasks)
+    tasks = []
+    funcs = []
+    args = []
+
+
+def do_tasks(context):
+    asyncio.run(do_tasks1())
 
 
 def start(update, context):
@@ -142,6 +181,9 @@ def start(update, context):
 
 
 def main():
+    global tasks
+    tasks = []
+
     updater = Updater(TOKEN)
 
     dp = updater.dispatcher
@@ -166,6 +208,13 @@ def main():
 
     updater.start_polling()
 
+    jobq = JobQueue()
+
+    jobq.set_dispatcher(dp)
+
+    jobq.run_repeating(callback=do_tasks, interval=timedelta(seconds=5))
+
+    jobq.start()
     # Ждём завершения приложения.
     # (например, получения сигнала SIG_TERM при нажатии клавиш Ctrl+C)
     updater.idle()
@@ -173,6 +222,8 @@ def main():
 
 # Запускаем функцию main() в случае запуска скрипта.
 if __name__ == '__main__':
+    if os.name == 'nt':
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     db_session.global_init("db/peoples.sqlite")
     db_sess = db_session.create_session()
     main()
