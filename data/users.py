@@ -11,5 +11,5 @@ class User(SqlAlchemyBase):
     first_name = sqlalchemy.Column(sqlalchemy.String)
     lang = sqlalchemy.Column(sqlalchemy.String)
     is_bot = sqlalchemy.Column(sqlalchemy.Integer)
-    longitude = sqlalchemy.Column(sqlalchemy.Real)
-    latitude = sqlalchemy.Column(sqlalchemy.Real)
+    longitude = sqlalchemy.Column(sqlalchemy.Float)
+    latitude = sqlalchemy.Column(sqlalchemy.Float)

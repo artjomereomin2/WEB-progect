@@ -10,6 +10,7 @@ from keys import KEY
 from data import db_session
 from data.users import User
 from data.requests import Requests
+import sqlalchemy
 
 text_analizer = GetPlaces()
 
@@ -121,39 +122,40 @@ def normal_time(hours):
 
 class WayFinder:
     def __init__(self):
-        self.db_sess = db_session.create_session()
         self.update = None
         self.time = 0
 
-    def add_user(self, id, last_name, first_name, lang, is_bot):
-        if not self.db_sess.query(User).filter(User.id == id):
+    def add_user(self, id, last_name, first_name, lang, is_bot, db_sess):
+        try:
             user = User()
             user.id = id
             user.last_name = last_name
             user.first_name = first_name
             user.lang = lang
             user.is_bot = int(is_bot)
-            self.db_sess.add(user)
-            self.db_sess.commit()
+            db_sess.add(user)
+            db_sess.commit()
+        except sqlalchemy.exc.IntegrityError:
+            db_sess.rollback()
 
-    def set_location(self, id, coords):
-        user = self.db_sess.query(User).filter(User.id == id).first()
+    def set_location(self, id, coords, db_sess):
+        user = db_sess.query(User).filter(User.id == id).first()
         user.longitude = coords[0]
         user.latitude = coords[1]
-        self.db_sess.commit()
+        db_sess.commit()
 
-    def do_work(self, text, command_type, id, coords=None, update=None):
+    def do_work(self, text, command_type, id, db_sess, coords=None, update=None):
         self.update = update
         # places = text_analizer.where_to_go(text, command_type)
         # print(text, command_type)
 
         request = Requests()
         if command_type != 'From':
-            request.request = command_type + ' ' + text
+            request.request = command_type + ' ' + ' '.join(text)
         else:
             request.request = command_type + ' ' + text[0] + ' to ' + text[1]
-        self.db_sess.add(request)
-        self.db_sess.commit()
+        db_sess.add(request)
+        db_sess.commit()
 
         goodness = 10
         line = '\n'
