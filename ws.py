@@ -4,7 +4,6 @@ from random import choice
 import math
 import requests
 from bigbrain import flashsort
-from pprint import pprint
 import asyncio
 from datetime import timedelta
 from keys import KEY

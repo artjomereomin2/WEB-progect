@@ -1,7 +1,9 @@
 datetime
 json
 logging
-telegram.ext
+telegram
+asyncio
+os
 random
 math
 requests
