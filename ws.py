@@ -135,10 +135,8 @@ class WayFinder:
         con.commit()
         con.close()
 
-    async def do_work(self, text, command_type, id, coords=None, update=None):
+    async def do_work(self, text, command_type, id, coords, update):
         self.update = update
-        # places = text_analizer.where_to_go(text, command_type)
-        # print(text, command_type)
 
         con = sqlite3.connect("peoples.sqlite")
         cur = con.cursor()
@@ -169,41 +167,40 @@ class WayFinder:
         if command_type == '/From':
             now = GeoFind(text[0], coords, 1)[0].location
             points = {text[1]: GeoFind(text[1], coords, goodness)}
-            way, time = self.find([text[1]], points, now)
+            way, time = await self.find([text[1]], points, now)
             return f"Маршрут построен:\nИз {way[0].__repr__()} . {normal_time(time)}."
         if command_type == '/FindList':
             now = coords
             points = {place_name: GeoFind(place_name, coords, goodness) for place_name in text}
-            way, time = self.find(text, points, now)
+            way, time = await self.find(text, points, now)
             res = [f"*-{way[i]}" for i in range(len(way))]
             to_say = f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} без учёта времени пребывания на местах."
         if command_type == '/FindOrder':
             now = coords
             points = {place_name: GeoFind(place_name, coords, goodness) for place_name in text}
-            way, time = self.find(text, points, now, order=True)
+            way, time = await self.find(text, points, now, order=True)
             res = [f"*-{way[i]}" for i in range(len(way))]
             to_say = f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} без учёта времени пребывания на местах."
         if command_type == '/Text':
             to_find = text_analizer.where_to_go(text)
             now = coords
             points = {place_name: GeoFind(place_name, coords, goodness) for place_name in to_find}
-            way, time = self.find(to_find, points, now)
+            way, time = await self.find(to_find, points, now)
 
             res = [f"*-{way[i]}" for i in range(len(way))]
             to_say = f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} без учёта времени пребывания на местах."
         update.message.reply_text(to_say)
 
-    def find(self, to_go, points, start, order=False):
+    async def find(self, to_go, points, start, order=False):
         self.points = points
         self.begin = start
         self.time = 0
-        return asyncio.run(self.go("START", -1, [], to_go, order=order))
+        return await self.go("START", -1, [], to_go, order=order)
 
     def add_people(self, id, last_name, first_name, lang, is_bot, coords):
         pass
 
     async def go(self, now_type, ind, way, to_go, time=0, order=False):
-        print(self.time)
         await asyncio.sleep(10**(-100)) #???
         self.time += 1
         if self.time == 2 * 10 ** 5 and self.update is not None:
@@ -237,4 +234,3 @@ class WayFinder:
                 best_way = resway.copy()
                 best_time = restime
         return best_way, best_time
-#607

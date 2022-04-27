@@ -4,8 +4,8 @@ import logging
 from telegram.ext import Updater, MessageHandler, Filters, CommandHandler, ConversationHandler, JobQueue
 from ws import WayFinder
 from keys import TOKEN
-import schedule
 import asyncio
+import os
 from pprint import pprint
 
 # Запускаем логгирование
@@ -47,36 +47,48 @@ def Location(update, context):
 
 def FindOne(update, context):  # +
     try:
-        tasks.append(asyncio.create_task(
+        funcs.append(context.user_data['way'].do_work)
+        args.append([update.message.text.split()[1:], '/FindOne', update.message.from_user.id,
+                     context.user_data['coords'], update])
+        """tasks.append(asyncio.create_task(
             context.user_data['way'].do_work(update.message.text.split()[1:], '/FindOne', update.message.from_user.id,
-                                             context.user_data['coords'],update=update)))
+                                             context.user_data['coords'],update=update)))"""
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
 def FindAny(update, context):  # +
     try:
-        tasks.append(asyncio.create_task(
+        funcs.append(context.user_data['way'].do_work)
+        args.append([update.message.text.split()[1:], '/FindAny', update.message.from_user.id,
+                     context.user_data['coords'], update])
+        """tasks.append(asyncio.create_task(
             context.user_data['way'].do_work(update.message.text.split()[1:], '/FindAny', update.message.from_user.id,
-                                             context.user_data['coords'],update=update)))
+                                             context.user_data['coords'],update=update)))"""
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
 def FindList(update, context):  # +
     try:
-        tasks.append(asyncio.create_task(
+        funcs.append(context.user_data['way'].do_work)
+        args.append([' '.join(update.message.text.split()[1:]).split(','), '/FindList',
+                     update.message.from_user.id, context.user_data['coords'], update])
+        """tasks.append(asyncio.create_task(
             context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindList',
-                                             update.message.from_user.id, context.user_data['coords'],update=update)))
+                                             update.message.from_user.id, context.user_data['coords'],update=update)))"""
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
 def FindOrder(update, context):  # +
     try:
-        tasks.append(asyncio.create_task(
+        funcs.append(context.user_data['way'].do_work)
+        args.append([' '.join(update.message.text.split()[1:]).split(','), '/FindOrder',
+                     update.message.from_user.id, context.user_data['coords'], update])
+        """tasks.append(asyncio.create_task(
             context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindOrder',
-                                             update.message.from_user.id, context.user_data['coords'],update=update)))
+                                             update.message.from_user.id, context.user_data['coords'],update=update)))"""
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
@@ -95,33 +107,51 @@ def From(update, context):
             else:
                 begin.append(word)
         # print(context.user_data['coords'])
-        tasks.append(asyncio.create_task(
+        funcs.append(context.user_data['way'].do_work)
+        args.append([(' '.join(begin), ' '.join(end)), '/From', update.message.from_user.id,
+                     context.user_data['coords'], update])
+        """tasks.append(asyncio.create_task(
             context.user_data['way'].do_work((' '.join(begin), ' '.join(end)), '/From', update.message.from_user.id,
-                                             context.user_data['coords'],update=update)))
+                                             context.user_data['coords'],update=update)))"""
     except KeyError:
         update.message.reply_text('Сначала отправьте координаты')
 
 
 def Text(update, context):  # ++-
-    tasks.append(asyncio.create_task(
+    funcs.append(context.user_data['way'].do_work)
+    args.append([' '.join(update.message.text.split()[1:]), '/Text',
+                 update.message.from_user.id, context.user_data['coords'], update])
+    """tasks.append(asyncio.create_task(
         context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]), '/Text',
-                                         update.message.from_user.id, context.user_data['coords'],update=update)))
+                                         update.message.from_user.id, context.user_data['coords'],update=update)))"""
 
 
 def something(update, context):
-    try:
-        tasks.append(asyncio.create_task(
-            context.user_data['way'].do_work(' '.join(update.message.text.split()), '/Text',
-                                             update.message.from_user.id, context.user_data['coords'],update=update)))
-    except Exception as e:
-        print(e) #???
+    funcs.append(context.user_data['way'].do_work)
+    args.append([' '.join(update.message.text.split()), '/Text',
+                 update.message.from_user.id, context.user_data['coords'], update])
+    '''tasks.append(asyncio.create_task(
+        context.user_data['way'].do_work(' '.join(update.message.text.split()), '/Text',
+                                         update.message.from_user.id, context.user_data['coords'],update=update)))'''
+
+
+funcs = []
+args = []
+
+
+async def do_tasks1():
+    global tasks, funcs, args
+    for i in range(len(funcs)):
+        tasks.append(asyncio.create_task(funcs[i](*args[i])))
+    if tasks:
+        await asyncio.gather(*tasks)
+    tasks = []
+    funcs = []
+    args = []
 
 
 def do_tasks(context):
-    global tasks
-    if tasks:
-        asyncio.gather(*tasks)
-    tasks = []
+    asyncio.run(do_tasks1())
 
 
 def main():
@@ -166,4 +196,6 @@ def main():
 
 # Запускаем функцию main() в случае запуска скрипта.
 if __name__ == '__main__':
+    if os.name == 'nt':
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     main()
