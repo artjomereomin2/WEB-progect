@@ -19,8 +19,12 @@ logger = logging.getLogger(__name__)
 # Определяем функцию-обработчик сообщений.
 # У неё два параметра, сам бот и класс updater, принявший сообщение.
 def Help(update, context):
+    k = list(map(lambda x: x.request,
+                               list(db_sess.query(Requests).filter(Requests.user_id == update.message.from_user.id))))
+    if len(k) > 2:
+        k = k[-2:]
     reply_keyboard = [['/SetLocation', '/help'],
-                      db_sess.query(Requests).filter(Requests.user_id == update.message.from_user.id)[-2:]]
+                      k]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
     update.message.reply_text(
         'Я волшебный колобок и я проведу вас по этому страшному лабиринту.'
@@ -32,7 +36,7 @@ def Help(update, context):
         '\n/From ...(место откуда) to ...(место куда) - Оценивает время пути между 2 точками'
         '\n/Text ...(предложение) - Расапознаёт запрос пользователя и сообщает куда и как долго ему нужно идти'
         '\n/FindOrder <место1>, <место2>... - ищет места для посещения в порядке, например если человек хочет '
-        'сходить в кино, а затем поужинать, он напишет /FindOrder кино, кафе')
+        'сходить в кино, а затем поужинать, он напишет /FindOrder кино, кафе', reply_markup=markup)
 
 
 def SetLocation(update, context):
@@ -51,7 +55,8 @@ def Location(update, context):
 def FindOne(update, context):  # +
     try:
         update.message.reply_text(
-            context.user_data['way'].do_work(update.message.text.split()[1:], '/FindOne', update.message.from_user.id, db_sess,
+            context.user_data['way'].do_work(update.message.text.split()[1:], '/FindOne', update.message.from_user.id,
+                                             db_sess,
                                              context.user_data['coords']))
     except KeyError:
         db_sess.rollback()
@@ -61,7 +66,8 @@ def FindOne(update, context):  # +
 def FindAny(update, context):  # +
     try:
         update.message.reply_text(
-            context.user_data['way'].do_work(update.message.text.split()[1:], '/FindAny', update.message.from_user.id, db_sess,
+            context.user_data['way'].do_work(update.message.text.split()[1:], '/FindAny', update.message.from_user.id,
+                                             db_sess,
                                              context.user_data['coords']))
     except KeyError:
         db_sess.rollback()
@@ -105,7 +111,8 @@ def From(update, context):
                 begin.append(word)
         print(context.user_data['coords'])
         update.message.reply_text(
-            context.user_data['way'].do_work((' '.join(begin), ' '.join(end)), '/From', update.message.from_user.id, db_sess,
+            context.user_data['way'].do_work((' '.join(begin), ' '.join(end)), '/From', update.message.from_user.id,
+                                             db_sess,
                                              context.user_data['coords']))
     except KeyError:
         db_sess.rollback()

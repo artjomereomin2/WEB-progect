@@ -150,6 +150,7 @@ class WayFinder:
         # print(text, command_type)
 
         request = Requests()
+        request.user_id = id
         if command_type != 'From':
             request.request = command_type + ' ' + ' '.join(text)
         else:
