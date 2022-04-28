@@ -43,7 +43,6 @@ def SetLocation(update, context):
 def Location(update, context):
     ws = WayFinder()
     context.user_data['coords'] = update.message.location['longitude'], update.message.location['latitude']
-    print(context.user_data['coords'])
     ws.set_location(update.message.from_user.id, context.user_data['coords'], db_sess)
     update.message.reply_text('Спасибо! Можете спрашивать у меня куда вам надо')
     return -1
@@ -62,7 +61,6 @@ def Adderss(update, context):
         return 1
     else:
         context.user_data['coords'] = gf[0].location
-        print(context.user_data['coords'])
         ws.set_location(update.message.from_user.id, context.user_data['coords'], db_sess)
         update.message.reply_text('Спасибо! Можете спрашивать у меня куда вам надо')
         return -1
@@ -79,9 +77,6 @@ def FindOne(update, context):  # +
     funcs.append(ws.do_work)
     args.append([update.message.text.split()[1:], '/FindOne', update.message.from_user.id, db_sess,
                  context.user_data['coords'], update])
-    """tasks.append(asyncio.create_task(
-        context.user_data['way'].do_work(update.message.text.split()[1:], '/FindOne', update.message.from_user.id,
-                                         context.user_data['coords'],update=update)))"""
 
 
 def FindAny(update, context):  # +
@@ -95,9 +90,6 @@ def FindAny(update, context):  # +
     funcs.append(ws.do_work)
     args.append([update.message.text.split()[1:], '/FindAny', update.message.from_user.id, db_sess,
                  context.user_data['coords'], update])
-    """tasks.append(asyncio.create_task(
-        context.user_data['way'].do_work(update.message.text.split()[1:], '/FindAny', update.message.from_user.id,
-                                         context.user_data['coords'],update=update)))"""
 
 
 def FindList(update, context):  # +
@@ -111,9 +103,6 @@ def FindList(update, context):  # +
     funcs.append(ws.do_work)
     args.append([' '.join(update.message.text.split()[1:]).split(','), '/FindList',
                  update.message.from_user.id, db_sess, context.user_data['coords'], update])
-    """tasks.append(asyncio.create_task(
-        context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindList',
-                                         update.message.from_user.id, context.user_data['coords'],update=update)))"""
 
 
 def FindOrder(update, context):  # +
@@ -127,9 +116,6 @@ def FindOrder(update, context):  # +
     funcs.append(ws.do_work)
     args.append([' '.join(update.message.text.split()[1:]).split(','), '/FindOrder',
                  update.message.from_user.id, db_sess, context.user_data['coords'], update])
-    """tasks.append(asyncio.create_task(
-        context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]).split(','), '/FindOrder',
-                                         update.message.from_user.id, context.user_data['coords'],update=update)))"""
 
 
 def From(update, context):
@@ -151,13 +137,9 @@ def From(update, context):
             end.append(word)
         else:
             begin.append(word)
-    # print(context.user_data['coords'])
     funcs.append(ws.do_work)
     args.append([(' '.join(begin), ' '.join(end)), '/From', update.message.from_user.id, db_sess,
                  context.user_data['coords'], update])
-    """tasks.append(asyncio.create_task(
-        context.user_data['way'].do_work((' '.join(begin), ' '.join(end)), '/From', update.message.from_user.id,
-                                         context.user_data['coords'],update=update)))"""
 
 
 def Text(update, context):  # ++-
@@ -171,9 +153,6 @@ def Text(update, context):  # ++-
     funcs.append(ws.do_work)
     args.append([update.message.text.split()[1:], '/Text',
                  update.message.from_user.id, db_sess, context.user_data['coords'], update])
-    """tasks.append(asyncio.create_task(
-        context.user_data['way'].do_work(' '.join(update.message.text.split()[1:]), '/Text',
-                                         update.message.from_user.id, context.user_data['coords'],update=update)))"""
 
 
 def something(update, context):
@@ -187,9 +166,6 @@ def something(update, context):
     funcs.append(ws.do_work)
     args.append([update.message.text.split(), '/Text',
                  update.message.from_user.id, db_sess, context.user_data['coords'], update])
-    '''tasks.append(asyncio.create_task(
-        context.user_data['way'].do_work(' '.join(update.message.text.split()), '/Text',
-                                         update.message.from_user.id, context.user_data['coords'],update=update)))'''
 
 
 funcs = []
@@ -199,7 +175,6 @@ args = []
 async def do_tasks1():
     global tasks, funcs, args
     for i in range(len(funcs)):
-        print(funcs, args)
         tasks.append(asyncio.create_task(funcs[i](*args[i])))
     if tasks:
         await asyncio.gather(*tasks)
@@ -209,14 +184,27 @@ async def do_tasks1():
 
 
 def do_tasks(context):
-    asyncio.run(do_tasks1())
+    global tasks, funcs, args
+    try:
+        asyncio.run(do_tasks1())
+    except Exception as e:
+        if len(funcs) > len(args):
+            while len(funcs) > len(args):
+                funcs.pop(0)
+        elif len(funcs) < len(args):
+            while len(funcs) < len(args):
+                args.pop(0)
+        else:
+            funcs.pop(0)
+            args.pop(0)
+        tasks = []
 
 
 def start(update, context):
     ws = WayFinder()
     ws.add_user(update.message.from_user.id, update.message.from_user.last_name,
-                                      update.message.from_user.first_name, update.message.from_user.language_code,
-                                      update.message.from_user.is_bot, db_sess)
+                update.message.from_user.first_name, update.message.from_user.language_code,
+                update.message.from_user.is_bot, db_sess)
     Help(update, context)
 
 

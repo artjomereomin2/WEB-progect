@@ -23,8 +23,8 @@ def mergesort(a, key=ex_key):
     return merge(mergesort(a[:m], key), mergesort(a[m:], key), key)
 
 
-def f(x, a, b):
-    return b + ((a - b) ** 2 + (x - a + b) ** 2) ** (1 / 2)
+def f(x, a, b): # a<b
+    return a+((x-a)*(b-a))**0.5
 
 
 def flashsort(a, key=ex_key):

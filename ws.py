@@ -229,7 +229,6 @@ class WayFinder:
                 to_say = f"Мы нашли для вас оптимальный маршрут:\n{line.join(res)}. {normal_time(time)} без учёта времени пребывания на местах."
         if command_type == '/Text':
             to_find = text_analizer.where_to_go(' '.join(text))
-            print(to_find)
             now = coords
             points = {place_name: GeoFind(place_name, coords, goodness) for place_name in to_find}
             if not points:
