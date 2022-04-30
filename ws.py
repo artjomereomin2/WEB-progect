@@ -11,7 +11,6 @@ from data import db_session
 from data.users import User
 from data.requests import Requests
 import sqlalchemy
-from telegram import ReplyKeyboardMarkup
 
 text_analizer = GetPlaces()
 
