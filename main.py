@@ -248,7 +248,7 @@ def main():
 
     jobq.set_dispatcher(dp)
 
-    jobq.run_repeating(callback=do_tasks, interval=timedelta(seconds=2))
+    jobq.run_repeating(callback=do_tasks, interval=timedelta(seconds=4))
 
     jobq.start()
     # Ждём завершения приложения.
