@@ -60,10 +60,13 @@ def Adderss(update, context):
         update.message.reply_text('Я вас не понимаю(. Попробуйте ещё раз')
         return 1
     else:
-        context.user_data['coords'] = gf[0].location
-        ws.set_location(update.message.from_user.id, context.user_data['coords'], db_sess)
-        update.message.reply_text('Спасибо! Можете спрашивать у меня куда вам надо')
-        return -1
+        try:
+            context.user_data['coords'] = gf[0].location
+            ws.set_location(update.message.from_user.id, context.user_data['coords'], db_sess)
+            update.message.reply_text('Спасибо! Можете спрашивать у меня куда вам надо')
+            return -1
+        except AttributeError:
+            update.message.reply_text('Вы не индентифицированы. Скажите /start')
 
 
 def FindOne(update, context):  # +
